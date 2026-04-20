@@ -231,11 +231,10 @@ const CONFIG = {
   // browser use *as long as* you restrict origins in Google Cloud.
   GMAIL_CLIENT_ID:   "621211234191-0eriv1u9mfg6slnelid60d41ff1e3e9k.apps.googleusercontent.com",
   GMAIL_API_KEY:     "AIzaSyAdHa_6vfSFUFay-1peBtUFYGZSfpY0teQ",
-  GMAIL_DESTINATION: "info@galtrix.net",    // mailbox you sign in with (change if different)
-  // Broad query that catches all Formspree sender variants + any "new submission" subject.
-  // Tighten this (e.g. `from:no-reply@formspree.io newer_than:30d`) once you know
-  // your exact sender. See console.log output below for what the dashboard found.
-  GMAIL_QUERY:       '(from:formspree.io OR subject:"new submission") newer_than:90d',
+  GMAIL_DESTINATION: "info@galtrix.net",    // fallback label only — the real connected account is read from Gmail after sign-in
+  // Broad query that catches all Formspree sender variants + "submission" in the subject.
+  // Uses unquoted `subject:submission` so it matches "New form submission on Galtrix Web".
+  GMAIL_QUERY:       'from:formspree.io OR subject:submission newer_than:90d',
   GMAIL_SCOPE:       'https://www.googleapis.com/auth/gmail.readonly',
   GMAIL_DISCOVERY:   'https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest',
 };
@@ -374,6 +373,7 @@ const SS = {
 const Gmail = {
   tokenClient: null,
   accessToken: null,
+  profileEmail: null,   // the real address the user signed in with
   _initPromise: null,
 
   isConfigured(){
@@ -416,9 +416,10 @@ const Gmail = {
     const cached = SS.get("galtrix.gmail.token");
     if (cached) {
       try {
-        const { access_token, expires_at } = JSON.parse(cached);
+        const { access_token, expires_at, profileEmail } = JSON.parse(cached);
         if (expires_at && expires_at > Date.now() + 60_000) {
           this.accessToken = access_token;
+          this.profileEmail = profileEmail || null;
         }
       } catch {}
     }
@@ -428,11 +429,19 @@ const Gmail = {
   async signIn(){
     if (!this.tokenClient) await this.init();
     return new Promise((resolve, reject) => {
-      this.tokenClient.callback = (resp) => {
+      this.tokenClient.callback = async (resp) => {
         if (resp.error) return reject(new Error(resp.error));
         this.accessToken = resp.access_token;
         const expires_at = Date.now() + (resp.expires_in || 3600) * 1000;
         SS.set("galtrix.gmail.token", JSON.stringify({ access_token: resp.access_token, expires_at }));
+        // Fetch the real signed-in email — helpful if the user picked a different account than CONFIG.GMAIL_DESTINATION
+        try {
+          const prof = await this._api("users/me/profile");
+          this.profileEmail = prof.emailAddress || null;
+          console.log("[Gmail] signed in as", this.profileEmail);
+          // Re-persist with profileEmail so a page refresh restores the right label
+          SS.set("galtrix.gmail.token", JSON.stringify({ access_token: resp.access_token, expires_at, profileEmail: this.profileEmail }));
+        } catch(e){ console.warn("[Gmail] profile fetch failed:", e.message); }
         resolve(resp);
       };
       // prompt:'' = silent if possible, fall back to account chooser
@@ -443,6 +452,7 @@ const Gmail = {
   signOut(){
     const t = this.accessToken;
     this.accessToken = null;
+    this.profileEmail = null;
     SS.del("galtrix.gmail.token");
     if (t && window.google?.accounts?.oauth2) {
       window.google.accounts.oauth2.revoke(t, () => {});
@@ -512,24 +522,53 @@ const Gmail = {
       .replace(/&quot;/g, '"');
   },
 
-  // Parse a Formspree notification email body into the fields of the form
+  // Parse a Formspree notification email body into the fields of the form.
+  // Handles BOTH layouts Formspree uses in the wild:
+  //   (a) "fieldName: value"              — classic single-line key-value
+  //   (b) "fieldName\nvalue"              — label on one line, value on the next
+  //                                         (current default template)
   _parseFormspreeBody(text){
     if (!text) return {};
     const out = {};
-    // Normalize whitespace and split into lines
-    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-    // Match "fieldName: value" or "fieldName = value"
-    const kv = /^([A-Za-z0-9_\-\s]{1,40})\s*[:=]\s*(.+)$/;
+
+    // Known Formspree / contact-form field labels. When a line matches one of
+    // these exactly (lowercased, no spaces), treat it as a label and take the
+    // next non-empty line as the value.
+    const knownFields = new Set([
+      "fullname","name","firstname","lastname","email","emailaddress",
+      "project","message","comments","comment","subject","phone","phonenumber",
+      "source","company","budget","timeline","country","website","url",
+    ]);
+
+    const lines = text.split(/\r?\n/).map(l => l.trim());
+    const kv = /^([A-Za-z][A-Za-z0-9_\- ]{0,40})\s*[:=]\s*(.+)$/;
+
     let lastKey = null;
-    for (const line of lines){
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+
+      // Blank line ends any continuation context
+      if (!line) { lastKey = null; continue; }
+
+      // Strategy (a): inline key:value
       const m = line.match(kv);
-      if (m){
+      if (m) {
         const key = m[1].trim().toLowerCase().replace(/\s+/g,"");
         out[key] = (m[2] || "").trim();
         lastKey = key;
-      } else if (lastKey && line.length > 1 && !/^[-=_*]+$/.test(line)){
-        // continuation of previous value (long messages)
-        out[lastKey] = (out[lastKey] + " " + line).trim();
+        continue;
+      }
+
+      // Strategy (b): line IS a known field label → next non-empty line is the value
+      const normalizedKey = line.toLowerCase().replace(/\s+/g,"");
+      if (line.length <= 40 && knownFields.has(normalizedKey) && !out[normalizedKey]) {
+        lastKey = normalizedKey;
+        continue;
+      }
+
+      // Otherwise: continuation of the previous value (multi-line messages)
+      if (lastKey) {
+        out[lastKey] = out[lastKey] ? (out[lastKey] + " " + line).trim() : line;
       }
     }
     return out;
@@ -692,7 +731,7 @@ function Sidebar({ view, setView, counts, sources }){
             <IntegrationPill
               label="Gmail API"
               state={sources?.gmail || "mock"}
-              hint={CONFIG.GMAIL_DESTINATION || "not set"}
+              hint={Gmail.profileEmail || CONFIG.GMAIL_DESTINATION || "not set"}
             />
           </div>
         </div>
@@ -879,7 +918,7 @@ function GmailPanel({ notes, connected, configured, onOpen, onConnect, onDisconn
         </div>
         <div className="flex-1">
           <div className="font-display text-[15px] font-semibold tracking-tight">Gmail Notifications</div>
-          <div className="text-[11px] text-slate-500 mt-0.5">{CONFIG.GMAIL_DESTINATION || "destination not set"}</div>
+          <div className="text-[11px] text-slate-500 mt-0.5">{Gmail.profileEmail || CONFIG.GMAIL_DESTINATION || "destination not set"}</div>
         </div>
         {connected ? (
           <>

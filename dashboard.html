@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1440" />
+<title>GALTRIX — Admin Dashboard</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%2322d3ee'/><stop offset='1' stop-color='%23a855f7'/></linearGradient></defs><polygon points='32,4 58,18 58,46 32,60 6,46 6,18' fill='none' stroke='url(%23g)' stroke-width='3'/><path d='M20 22 L32 42 L44 22 M26 34 L38 34' stroke='url(%23g)' stroke-width='4' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<!-- Google Identity Services (only — Gmail API is called directly via fetch) -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<style>
+  :root{
+    --bg:#04050d;
+    --panel:#0a0d1c;
+    --panel-2:#0d1124;
+    --border:rgba(148,163,184,0.10);
+    --border-strong:rgba(148,163,184,0.18);
+    --cyan:#22d3ee;
+    --cyan-soft:rgba(34,211,238,0.5);
+    --purple:#a855f7;
+    --purple-soft:rgba(168,85,247,0.5);
+    --text:#e6ecff;
+    --muted:#7b86a8;
+  }
+  html,body,#root{height:100%;}
+  html,body{background:var(--bg); color:var(--text); font-family:'Inter',system-ui,sans-serif; -webkit-font-smoothing:antialiased; overflow:hidden;}
+  *{box-sizing:border-box}
+  .font-display{font-family:'Space Grotesk','Inter',sans-serif; letter-spacing:-0.02em;}
+  .font-mono{font-family:'JetBrains Mono',ui-monospace,monospace;}
+
+  /* ---------- Ambient background ---------- */
+  .bg-stage{position:fixed; inset:0; z-index:0; overflow:hidden; pointer-events:none;
+    background:
+      radial-gradient(900px 700px at 12% 8%, rgba(12,26,54,0.85) 0%, transparent 60%),
+      radial-gradient(1100px 900px at 88% 24%, rgba(30,10,52,0.82) 0%, transparent 60%),
+      radial-gradient(ellipse at 50% 120%, #05071a 0%, #02030a 60%);}
+  .bg-stage .grid{
+    position:absolute; inset:0;
+    background-image:
+      linear-gradient(to right, rgba(125,211,252,0.035) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(168,140,255,0.035) 1px, transparent 1px);
+    background-size:64px 64px;
+    -webkit-mask-image:radial-gradient(ellipse 80% 65% at 50% 35%, #000 25%, transparent 85%);
+            mask-image:radial-gradient(ellipse 80% 65% at 50% 35%, #000 25%, transparent 85%);}
+  .bg-stage .glow{position:absolute; border-radius:50%; filter:blur(110px); mix-blend-mode:screen;}
+  .bg-stage .glow.cyan{width:60vmax; height:60vmax; top:-30%; left:-25%;
+    background:radial-gradient(circle, rgba(34,211,238,0.55), rgba(34,211,238,0) 60%);
+    animation:float1 34s ease-in-out infinite;}
+  .bg-stage .glow.purple{width:60vmax; height:60vmax; top:-10%; right:-25%;
+    background:radial-gradient(circle, rgba(168,85,247,0.55), rgba(168,85,247,0) 60%);
+    animation:float2 42s ease-in-out infinite;}
+  .bg-stage .glow.cyan2{width:50vmax; height:50vmax; bottom:-35%; left:25%;
+    background:radial-gradient(circle, rgba(56,189,248,0.35), rgba(56,189,248,0) 60%);
+    animation:float3 50s ease-in-out infinite;}
+  @keyframes float1{0%,100%{transform:translate(0,0)}50%{transform:translate(6%,4%)}}
+  @keyframes float2{0%,100%{transform:translate(0,0)}50%{transform:translate(-5%,5%)}}
+  @keyframes float3{0%,100%{transform:translate(0,0)}50%{transform:translate(3%,-3%)}}
+
+  /* Glass panels */
+  .glass{
+    background:linear-gradient(180deg, rgba(13,17,36,0.72), rgba(8,11,24,0.72));
+    border:1px solid var(--border);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+  }
+  .glass-strong{
+    background:linear-gradient(180deg, rgba(18,22,44,0.85), rgba(10,13,28,0.85));
+    border:1px solid var(--border-strong);
+    backdrop-filter: blur(18px) saturate(150%);
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+  }
+  .hairline{border:1px solid var(--border);}
+  .hairline-strong{border:1px solid var(--border-strong);}
+
+  /* Gradient text */
+  .grad-text{
+    background:linear-gradient(90deg,#67e8f9,#c4b5fd);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .grad-border{
+    background:
+      linear-gradient(var(--panel-2),var(--panel-2)) padding-box,
+      linear-gradient(135deg, rgba(34,211,238,0.55), rgba(168,85,247,0.55)) border-box;
+    border:1px solid transparent;
+  }
+
+  /* Soft glow */
+  .glow-cyan{box-shadow:0 0 0 1px rgba(34,211,238,0.25), 0 8px 40px -10px rgba(34,211,238,0.35);}
+  .glow-purple{box-shadow:0 0 0 1px rgba(168,85,247,0.25), 0 8px 40px -10px rgba(168,85,247,0.35);}
+
+  /* Status pills */
+  .pill{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; font-size:11px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase;}
+  .pill .dot{width:6px; height:6px; border-radius:999px;}
+  .pill.new{background:rgba(34,211,238,0.10); color:#67e8f9; border:1px solid rgba(34,211,238,0.25);} .pill.new .dot{background:#22d3ee; box-shadow:0 0 10px #22d3ee;}
+  .pill.contacted{background:rgba(168,85,247,0.10); color:#d8b4fe; border:1px solid rgba(168,85,247,0.25);} .pill.contacted .dot{background:#a855f7; box-shadow:0 0 10px #a855f7;}
+  .pill.archived{background:rgba(148,163,184,0.08); color:#94a3b8; border:1px solid rgba(148,163,184,0.18);} .pill.archived .dot{background:#94a3b8;}
+
+  /* Sidebar nav */
+  .nav-item{display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:12px; color:#9aa3c0; font-weight:500; font-size:14px; transition:all .22s ease; cursor:pointer; border:1px solid transparent;}
+  .nav-item:hover{background:rgba(34,211,238,0.04); color:#e6ecff; border-color:var(--border);}
+  .nav-item.active{
+    color:#eaf4ff;
+    background:linear-gradient(90deg, rgba(34,211,238,0.12), rgba(168,85,247,0.10));
+    border-color:rgba(34,211,238,0.22);
+    box-shadow:inset 0 0 0 1px rgba(34,211,238,0.08), 0 4px 22px -10px rgba(34,211,238,0.35);
+  }
+  .nav-item svg{opacity:.9;}
+
+  /* Table rows */
+  .row{transition:all .2s ease;}
+  .row:hover{background:rgba(34,211,238,0.04);}
+  .row.selected{background:linear-gradient(90deg, rgba(34,211,238,0.08), rgba(168,85,247,0.06));}
+
+  /* Custom scrollbars */
+  .scroll-y{overflow-y:auto;}
+  .scroll-y::-webkit-scrollbar{width:10px;}
+  .scroll-y::-webkit-scrollbar-track{background:transparent;}
+  .scroll-y::-webkit-scrollbar-thumb{background:rgba(148,163,184,0.12); border-radius:10px; border:2px solid transparent; background-clip:padding-box;}
+  .scroll-y::-webkit-scrollbar-thumb:hover{background:rgba(148,163,184,0.22); background-clip:padding-box;}
+
+  /* Inputs */
+  .input{
+    width:100%; background:rgba(8,10,24,0.7); color:var(--text);
+    border:1px solid var(--border); border-radius:10px; padding:10px 12px 10px 38px;
+    font-size:13.5px; outline:none; transition:all .2s ease;
+  }
+  .input:focus{border-color:rgba(34,211,238,0.45); box-shadow:0 0 0 3px rgba(34,211,238,0.12);}
+  .btn{
+    display:inline-flex; align-items:center; gap:8px; padding:8px 14px;
+    border-radius:10px; font-size:13px; font-weight:600;
+    border:1px solid var(--border); background:rgba(13,17,36,0.6); color:#cbd5ff;
+    transition:all .2s ease; cursor:pointer;
+  }
+  .btn:hover{border-color:rgba(34,211,238,0.35); color:#fff;}
+  .btn.primary{
+    background:linear-gradient(135deg, rgba(34,211,238,0.18), rgba(168,85,247,0.18));
+    border-color:rgba(34,211,238,0.4); color:#eaf4ff;
+    box-shadow:0 6px 28px -12px rgba(34,211,238,0.45);
+  }
+  .btn.primary:hover{border-color:rgba(168,85,247,0.55); box-shadow:0 8px 32px -10px rgba(168,85,247,0.55);}
+  .btn.danger{color:#fecaca; border-color:rgba(239,68,68,0.3);}
+  .btn.danger:hover{background:rgba(239,68,68,0.10);}
+
+  /* Segmented */
+  .seg{display:inline-flex; padding:4px; border-radius:12px; background:rgba(8,10,24,0.7); border:1px solid var(--border);}
+  .seg button{padding:7px 14px; font-size:12.5px; font-weight:600; color:#8b95b6; border-radius:8px; transition:all .18s ease;}
+  .seg button:hover{color:#e6ecff;}
+  .seg button.on{color:#eaf4ff; background:linear-gradient(135deg, rgba(34,211,238,0.20), rgba(168,85,247,0.20)); box-shadow:inset 0 0 0 1px rgba(34,211,238,0.28);}
+  .seg button .n{margin-left:6px; font-size:11px; padding:1px 6px; border-radius:999px; background:rgba(148,163,184,0.12); color:#cbd5ff;}
+
+  /* KPI sparkline */
+  .spark-path{fill:none; stroke-width:1.75;}
+
+  /* Side panel slide-in */
+  @keyframes slide-in{from{transform:translateX(30px); opacity:0;} to{transform:translateX(0); opacity:1;}}
+  .slide-in{animation:slide-in .28s ease-out;}
+  @keyframes fade-in{from{opacity:0;} to{opacity:1;}}
+  .fade-in{animation:fade-in .3s ease-out;}
+
+  /* Pulse dot */
+  .live::before{content:""; width:6px; height:6px; border-radius:999px; background:#22d3ee; box-shadow:0 0 10px #22d3ee; display:inline-block; margin-right:8px; animation:pulse 1.6s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:1; transform:scale(1);}50%{opacity:.4; transform:scale(.85);}}
+
+  /* Chart bars */
+  .bar{fill:url(#barGrad);}
+
+  /* Keyboard chip */
+  .kbd{font-family:'JetBrains Mono',monospace; font-size:10.5px; padding:2px 6px; border-radius:5px; background:rgba(148,163,184,0.10); border:1px solid var(--border); color:#9aa3c0;}
+
+  /* Logo mark */
+  .logo-hex{filter:drop-shadow(0 0 16px rgba(34,211,238,0.25));}
+
+  /* Utility */
+  .divider{height:1px; background:linear-gradient(90deg, transparent, rgba(148,163,184,0.16), transparent);}
+</style>
+</head>
+<body class="text-slate-100">
+  <div class="bg-stage">
+    <div class="grid"></div>
+    <div class="glow cyan"></div>
+    <div class="glow purple"></div>
+    <div class="glow cyan2"></div>
+  </div>
+
+  <div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useRef, useCallback } = React;
+
+/* =====================================================================
+   ⚙️  CONFIGURATION
+   ---------------------------------------------------------------------
+   FORMSPREE
+     The PAT is NEVER in the browser. The dashboard calls the serverless
+     proxy at /api/formspree-submissions. Set these app settings in Azure:
+       Azure Portal → Static Web App → Configuration
+         FORMSPREE_FORM_ID = xykljbzj
+         FORMSPREE_PAT     = <Personal Access Token from formspree.io/account/api>
+
+   GMAIL
+     Real OAuth via Google Identity Services (token flow, browser-only).
+     Fill CLIENT_ID + API_KEY below, then click "Connect Gmail" in the UI.
+
+     Create them here (5 min):
+       https://console.cloud.google.com/apis/credentials
+     1. Create / pick a project.
+     2. APIs & Services → Library → enable "Gmail API".
+     3. OAuth consent screen → External → add your email as a test user,
+        scope: .../auth/gmail.readonly
+     4. Credentials → + Create credentials → OAuth client ID → Web app.
+        Authorized JS origins:
+          http://localhost:8000
+          https://<your-swa>.azurestaticapps.net
+          https://galtrix.com   (if using custom domain)
+     5. Credentials → + Create credentials → API key.
+   ===================================================================== */
+const CONFIG = {
+  // Formspree: read by the Azure Function — keep the form id here too,
+  // it's fine to be public (it's in your existing contact form).
+  FORMSPREE_FORM_ID: "xykljbzj",
+  FORMSPREE_PROXY:   "/api/formspree-submissions",
+
+  // Gmail OAuth (browser side). Client ID + API key are public-safe for
+  // browser use *as long as* you restrict origins in Google Cloud.
+  GMAIL_CLIENT_ID:   "621211234191-0eriv1u9mfg6slnelid60d41ff1e3e9k.apps.googleusercontent.com",
+  GMAIL_API_KEY:     "AIzaSyAdHa_6vfSFUFay-1peBtUFYGZSfpY0teQ",
+  GMAIL_DESTINATION: "info@galtrix.net",    // mailbox you sign in with (change if different)
+  GMAIL_QUERY:       'from:(no-reply@formspree.io) newer_than:30d',
+  GMAIL_SCOPE:       'https://www.googleapis.com/auth/gmail.readonly',
+  GMAIL_DISCOVERY:   'https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest',
+};
+
+/* ================= Icons (inline SVG, 20px) ================= */
+const Ico = {
+  dash:   (p)=> <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" {...p}><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>,
+  leads:  (p)=> <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" {...p}><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="7" r="2.3"/><path d="M15.5 13.5c2.9-.1 5 2 5 5"/></svg>,
+  inbox:  (p)=> <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" {...p}><path d="M3 13l2.5-7a2 2 0 012-1.4h9a2 2 0 012 1.4L21 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M3 13h5l1.5 2h5L16 13h5"/></svg>,
+  chart:  (p)=> <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" {...p}><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>,
+  gear:   (p)=> <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>,
+  search: (p)=> <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>,
+  bell:   (p)=> <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" {...p}><path d="M6 8a6 6 0 1112 0c0 7 3 7 3 9H3c0-2 3-2 3-9z"/><path d="M10 21a2 2 0 004 0"/></svg>,
+  mail:   (p)=> <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" {...p}><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 7 9-7"/></svg>,
+  check:  (p)=> <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" {...p}><path d="M5 12l5 5L20 7"/></svg>,
+  archive:(p)=> <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" {...p}><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v9a2 2 0 002 2h10a2 2 0 002-2V9"/><path d="M10 13h4"/></svg>,
+  trash:  (p)=> <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" {...p}><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12"/><path d="M9 7V4h6v3"/></svg>,
+  close:  (p)=> <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}><path d="M6 6l12 12M18 6L6 18"/></svg>,
+  refresh:(p)=> <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" {...p}><path d="M21 12a9 9 0 11-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>,
+  plug:   (p)=> <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" {...p}><path d="M9 2v6M15 2v6"/><rect x="7" y="8" width="10" height="6" rx="2"/><path d="M12 14v4a3 3 0 003 3"/></svg>,
+  export: (p)=> <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" {...p}><path d="M12 3v12"/><path d="M7 8l5-5 5 5"/><path d="M5 21h14"/></svg>,
+  arrow:  (p)=> <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" {...p}><path d="M5 12h14M13 6l6 6-6 6"/></svg>,
+  up:     (p)=> <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" {...p}><path d="M7 14l5-5 5 5"/></svg>,
+  dot:    (p)=> <svg viewBox="0 0 24 24" width="4" height="4" fill="currentColor" {...p}><circle cx="12" cy="12" r="6"/></svg>,
+};
+
+/* ================= Logo ================= */
+const LogoMark = ({size=36}) => (
+  <svg viewBox="0 0 64 64" width={size} height={size} className="logo-hex">
+    <defs>
+      <linearGradient id="lgg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stopColor="#22d3ee"/><stop offset="1" stopColor="#a855f7"/>
+      </linearGradient>
+    </defs>
+    <polygon points="32,4 58,18 58,46 32,60 6,46 6,18" fill="none" stroke="url(#lgg)" strokeWidth="2.5"/>
+    <path d="M20 22 L32 42 L44 22 M26 34 L38 34" stroke="url(#lgg)" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+  </svg>
+);
+
+/* ================= Mock Data ================= */
+const firstNames = ["Amelia","Marcus","Zara","Ivan","Priya","Noah","Lena","Diego","Yuki","Sasha","Owen","Maya","Lucas","Aya","Theo","Nora","Ezra","Isla","Kai","Juno","Caleb","Elena","Rhea","Roman","Soren","Vera"];
+const lastNames  = ["Vance","Okafor","Lindqvist","Park","Rossi","Dubois","Halverson","Markov","Chen","Singh","Nakamura","Cruz","Varga","Moreau","Delacroix","Bauer","Alvarez","Goyal","Zhou","Brandt","Aarens"];
+const domains = ["northwind.co","atlas-capital.com","helix.ai","meridianvc.com","foundrylabs.io","axiompartners.com","omnibridge.com","saltire.co","prismworks.io","quorumgroup.com"];
+const projectSeeds = [
+  "Looking to build an AI-powered ops layer across our portfolio. Timeline Q3. Can you walk us through your approach?",
+  "Our family office is evaluating venture partners with technical capability. We'd love an intro call.",
+  "We're exploring a $1.2M automation rollout across 14 sites. Need someone who can architect the full stack.",
+  "Recently raised Series A. Looking for a strategic operator to help scale infra and shape AI roadmap.",
+  "Private equity buy-side. Need technical diligence on two fintech targets this quarter.",
+  "Interested in your corporate venture building model. Could we schedule time next week?",
+  "Early-stage — pre-product. Seeking founding technical partner and capital.",
+  "Replatforming legacy ERP + rolling out internal copilot. Need an end-to-end partner.",
+  "Evaluating Galtrix for a co-investment alongside our fund in AI infrastructure.",
+  "B2B SaaS, $4M ARR. Want to explore a build-operate-transfer arrangement.",
+  "Need an assessment of our data architecture and an AI roadmap for the next 18 months.",
+  "Corporate innovation lead here — we'd like to pilot an internal AI agent deployment.",
+];
+const mkId = () => Math.random().toString(36).slice(2,10);
+const pick = (a) => a[Math.floor(Math.random()*a.length)];
+const daysAgo = (d) => { const t=new Date(); t.setDate(t.getDate()-d); t.setHours(Math.floor(Math.random()*24), Math.floor(Math.random()*60)); return t.toISOString(); };
+
+function buildMockLeads(n=28){
+  const out = [];
+  for (let i=0;i<n;i++){
+    const fn = pick(firstNames), ln = pick(lastNames);
+    const name = `${fn} ${ln}`;
+    const email = `${fn.toLowerCase()}.${ln.toLowerCase()}@${pick(domains)}`;
+    const status = i<8 ? "new" : i<18 ? "contacted" : (i<22 ? "new" : (i<26 ? "contacted" : "archived"));
+    out.push({
+      id: mkId(),
+      name,
+      email,
+      message: pick(projectSeeds),
+      source: pick(["Hero CTA","Footer Form","/ventures","/contact","Inbound"]),
+      submittedAt: daysAgo(Math.floor(Math.random()*26)),
+      status,
+      history: [
+        { t: "submitted", at: daysAgo(Math.floor(Math.random()*26)+1) },
+      ],
+    });
+  }
+  return out.sort((a,b)=> new Date(b.submittedAt) - new Date(a.submittedAt));
+}
+
+function buildMockGmail(leads){
+  // Derive Gmail notifications from leads (Formspree sends a notification email per submission)
+  return leads.slice(0,14).map(l => ({
+    id: "g_"+l.id,
+    from: "no-reply@formspree.io",
+    to: CONFIG.GMAIL_DESTINATION,
+    subject: `New submission from ${l.name}`,
+    preview: l.message.slice(0, 80) + (l.message.length>80?"…":""),
+    receivedAt: l.submittedAt,
+    unread: l.status === "new",
+    linkedLeadId: l.id,
+  }));
+}
+
+/* ================= Formspree connector =================
+   Calls the Azure Function proxy at CONFIG.FORMSPREE_PROXY.
+   The proxy reads FORMSPREE_FORM_ID + FORMSPREE_PAT from SWA app settings
+   and returns already-normalized submissions. No secrets in the browser.
+======================================================== */
+async function fetchFormspreeLeads(){
+  try {
+    const r = await fetch(CONFIG.FORMSPREE_PROXY, { headers: { "Accept":"application/json" } });
+    if (!r.ok) throw new Error("proxy http "+r.status);
+    const j = await r.json();
+    if (!j.ok) {
+      console.warn("[Formspree proxy]", j.error, j.message);
+      return null;
+    }
+    return j.submissions;
+  } catch(e){
+    console.warn("[Formspree] falling back to mock:", e.message);
+    return null;
+  }
+}
+
+/* ================= Gmail connector (Google Identity Services) =================
+   Token flow:
+     1. gapi.load('client') → gapi.client.init({ apiKey, discoveryDocs })
+     2. google.accounts.oauth2.initTokenClient({ client_id, scope, callback })
+     3. User clicks "Connect Gmail" → tokenClient.requestAccessToken()
+     4. gapi.client.gmail.users.messages.list({ userId:'me', q })
+     5. messages.get for each id → parse headers + snippet
+   Access token is kept in memory only (sessionStorage) — never committed.
+============================================================================= */
+// Safe sessionStorage — disabled inside data:/file:/ URLs and some private-mode browsers
+const SS = {
+  get(k){ try { return sessionStorage.getItem(k); } catch { return null; } },
+  set(k,v){ try { sessionStorage.setItem(k,v); } catch {} },
+  del(k){ try { sessionStorage.removeItem(k); } catch {} },
+};
+
+const Gmail = {
+  tokenClient: null,
+  accessToken: null,
+  _initPromise: null,
+
+  isConfigured(){
+    return !!(CONFIG.GMAIL_CLIENT_ID && CONFIG.GMAIL_API_KEY);
+  },
+
+  async _waitForScripts(){
+    // Only Google Identity Services is needed — Gmail API is called via fetch.
+    const start = Date.now();
+    while (!(window.google && window.google.accounts && window.google.accounts.oauth2)) {
+      if (Date.now() - start > 10000) {
+        throw new Error(
+          "Google Identity Services didn't load. Likely causes: Brave Shields or " +
+          "a privacy extension blocking accounts.google.com, a strict CSP, or a network issue."
+        );
+      }
+      await new Promise(r => setTimeout(r, 100));
+    }
+  },
+
+  // Dedupe concurrent callers — if init is already in-flight, everyone awaits the same promise
+  init(){
+    if (!this.isConfigured()) return Promise.resolve(false);
+    if (!this._initPromise) this._initPromise = this._doInit().catch(e => { this._initPromise = null; throw e; });
+    return this._initPromise;
+  },
+
+  async _doInit(){
+    await this._waitForScripts();
+
+    if (!this.tokenClient) {
+      this.tokenClient = window.google.accounts.oauth2.initTokenClient({
+        client_id: CONFIG.GMAIL_CLIENT_ID,
+        scope: CONFIG.GMAIL_SCOPE,
+        callback: () => {}, // per-request callback set in signIn()
+      });
+    }
+
+    // Restore a prior token if still valid
+    const cached = SS.get("galtrix.gmail.token");
+    if (cached) {
+      try {
+        const { access_token, expires_at } = JSON.parse(cached);
+        if (expires_at && expires_at > Date.now() + 60_000) {
+          this.accessToken = access_token;
+        }
+      } catch {}
+    }
+    return true;
+  },
+
+  async signIn(){
+    if (!this.tokenClient) await this.init();
+    return new Promise((resolve, reject) => {
+      this.tokenClient.callback = (resp) => {
+        if (resp.error) return reject(new Error(resp.error));
+        this.accessToken = resp.access_token;
+        const expires_at = Date.now() + (resp.expires_in || 3600) * 1000;
+        SS.set("galtrix.gmail.token", JSON.stringify({ access_token: resp.access_token, expires_at }));
+        resolve(resp);
+      };
+      // prompt:'' = silent if possible, fall back to account chooser
+      this.tokenClient.requestAccessToken({ prompt: this.accessToken ? "" : "consent" });
+    });
+  },
+
+  signOut(){
+    const t = this.accessToken;
+    this.accessToken = null;
+    SS.del("galtrix.gmail.token");
+    if (t && window.google?.accounts?.oauth2) {
+      window.google.accounts.oauth2.revoke(t, () => {});
+    }
+  },
+
+  // Direct Gmail REST call with Bearer token — no gapi dependency
+  async _api(path, params){
+    if (!this.accessToken) throw new Error("Not signed in to Gmail");
+    const url = new URL("https://gmail.googleapis.com/gmail/v1/" + path);
+    if (params) for (const [k,v] of Object.entries(params)) {
+      if (Array.isArray(v)) v.forEach(vv => url.searchParams.append(k, vv));
+      else if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
+    }
+    const r = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${this.accessToken}` },
+    });
+    if (r.status === 401) { this.signOut(); throw new Error("Gmail token expired — please reconnect"); }
+    if (!r.ok) {
+      const txt = await r.text().catch(()=> "");
+      throw new Error("Gmail API " + r.status + ": " + txt.slice(0, 240));
+    }
+    return r.json();
+  },
+
+  // Decode base64url (Gmail's encoding for message body data)
+  _decodeB64Url(s){
+    if (!s) return "";
+    try {
+      const b64 = s.replace(/-/g,'+').replace(/_/g,'/') + "===".slice((s.length+3)%4);
+      return decodeURIComponent(escape(atob(b64)));
+    } catch { return ""; }
+  },
+
+  // Walk payload parts, prefer text/plain, fall back to text/html
+  _extractBody(payload){
+    if (!payload) return "";
+    const walk = (p) => {
+      if (!p) return null;
+      if (p.mimeType === "text/plain" && p.body && p.body.data) return { mime:"plain", data:p.body.data };
+      if (p.mimeType === "text/html"  && p.body && p.body.data) return { mime:"html",  data:p.body.data };
+      if (p.parts && p.parts.length){
+        // Prefer plain
+        for (const c of p.parts){ const r = walk(c); if (r && r.mime === "plain") return r; }
+        for (const c of p.parts){ const r = walk(c); if (r) return r; }
+      }
+      return null;
+    };
+    const found = walk(payload);
+    if (!found) return "";
+    const raw = this._decodeB64Url(found.data);
+    if (found.mime === "plain") return raw;
+    // Strip HTML → text
+    return raw
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/p>/gi, "\n")
+      .replace(/<\/tr>/gi, "\n")
+      .replace(/<\/td>/gi, ": ")
+      .replace(/<[^>]+>/g, "")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&#39;/g, "'")
+      .replace(/&quot;/g, '"');
+  },
+
+  // Parse a Formspree notification email body into the fields of the form
+  _parseFormspreeBody(text){
+    if (!text) return {};
+    const out = {};
+    // Normalize whitespace and split into lines
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    // Match "fieldName: value" or "fieldName = value"
+    const kv = /^([A-Za-z0-9_\-\s]{1,40})\s*[:=]\s*(.+)$/;
+    let lastKey = null;
+    for (const line of lines){
+      const m = line.match(kv);
+      if (m){
+        const key = m[1].trim().toLowerCase().replace(/\s+/g,"");
+        out[key] = (m[2] || "").trim();
+        lastKey = key;
+      } else if (lastKey && line.length > 1 && !/^[-=_*]+$/.test(line)){
+        // continuation of previous value (long messages)
+        out[lastKey] = (out[lastKey] + " " + line).trim();
+      }
+    }
+    return out;
+  },
+
+  async _fetchFullMessages(q, max){
+    if (!this.accessToken) return [];
+    const listJson = await this._api("users/me/messages", { q, maxResults: max });
+    const ids = (listJson.messages || []).map(m => m.id);
+    if (!ids.length) return [];
+    const msgs = await Promise.all(ids.map(id =>
+      this._api(`users/me/messages/${encodeURIComponent(id)}`, { format: "full" })
+    ));
+    return msgs; // raw JSON — same shape as gapi's .result
+  },
+
+  async fetchNotifications(max = 30){
+    if (!this.accessToken) return null;
+    const msgs = await this._fetchFullMessages(CONFIG.GMAIL_QUERY, max);
+    return msgs.map(r => {
+      const headers = Object.fromEntries(((r.payload && r.payload.headers) || []).map(h => [h.name.toLowerCase(), h.value]));
+      const from = headers["from"] || "";
+      const m = from.match(/<([^>]+)>/); const fromEmail = m ? m[1] : from;
+      const date = headers["date"] ? new Date(headers["date"]).toISOString() : new Date(+r.internalDate || Date.now()).toISOString();
+      const unread = (r.labelIds || []).includes("UNREAD");
+      return {
+        id: r.id,
+        from: fromEmail,
+        to: headers["to"] || CONFIG.GMAIL_DESTINATION,
+        subject: headers["subject"] || "(no subject)",
+        preview: (r.snippet || "").slice(0, 140),
+        receivedAt: date,
+        unread,
+        linkedLeadId: null,
+      };
+    });
+  },
+
+  // Parse Formspree notifications → leads. This is the Gmail-only path
+  // that bypasses Formspree's paid Submissions API entirely.
+  async fetchLeads(max = 50){
+    if (!this.accessToken) return null;
+    const msgs = await this._fetchFullMessages(CONFIG.GMAIL_QUERY, max);
+    return msgs.map(r => {
+      const headers = Object.fromEntries(((r.payload && r.payload.headers) || []).map(h => [h.name.toLowerCase(), h.value]));
+      const body = this._extractBody(r.payload);
+      const fields = this._parseFormspreeBody(body);
+
+      // Lead email: prefer Reply-To (Formspree sets this to the submitter),
+      // then any parsed "email" field, then fall back to the snippet.
+      const replyTo = headers["reply-to"] || "";
+      const replyMatch = replyTo.match(/<([^>]+)>/);
+      const email = (replyMatch ? replyMatch[1] : replyTo) || fields.email || "—";
+
+      // Lead name: prefer parsed fullName/name, then the subject tail
+      // (Formspree default subject is "New submission from <name>").
+      const subj = headers["subject"] || "";
+      const subjMatch = subj.match(/new submission from\s+(.+)$/i);
+      const name = fields.fullname || fields.name || (subjMatch ? subjMatch[1].trim() : (email.split("@")[0] || "Unknown"));
+
+      // Message: prefer parsed "project" / "message", else fall back to snippet
+      const message = fields.project || fields.message || fields.comments || (r.snippet || "").slice(0, 600);
+
+      const source = fields.source || "Formspree → Gmail";
+      const submittedAt = headers["date"] ? new Date(headers["date"]).toISOString() : new Date(+r.internalDate || Date.now()).toISOString();
+
+      return {
+        id: r.id,
+        name,
+        email,
+        message,
+        source,
+        submittedAt,
+        status: (r.labelIds || []).includes("UNREAD") ? "new" : "contacted",
+        history: [{ t: "submitted", at: submittedAt }],
+        _gmailId: r.id,
+      };
+    });
+  },
+};
+
+async function fetchGmailNotifications(){
+  if (!Gmail.isConfigured() || !Gmail.accessToken) return null;
+  try {
+    return await Gmail.fetchNotifications();
+  } catch(e){
+    console.warn("[Gmail] fetch failed:", e);
+    return null;
+  }
+}
+
+/* ================= Small helpers ================= */
+const rel = (iso) => {
+  const d = new Date(iso), now = new Date();
+  const s = Math.max(1, Math.floor((now-d)/1000));
+  if (s < 60)    return s + "s ago";
+  if (s < 3600)  return Math.floor(s/60) + "m ago";
+  if (s < 86400) return Math.floor(s/3600) + "h ago";
+  if (s < 86400*7) return Math.floor(s/86400) + "d ago";
+  return d.toLocaleDateString(undefined, { month:'short', day:'numeric' });
+};
+const fullDate = (iso) => new Date(iso).toLocaleString(undefined, { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' });
+const initials = (name) => name.split(" ").map(s=>s[0]).slice(0,2).join("").toUpperCase();
+const fmt = (n) => n.toLocaleString();
+
+/* ================= Sidebar ================= */
+function Sidebar({ view, setView, counts, sources }){
+  const items = [
+    { k:"overview",  label:"Overview",   icon: Ico.dash },
+    { k:"leads",     label:"Leads",      icon: Ico.leads, badge: counts.new },
+    { k:"inbox",     label:"Gmail Inbox",icon: Ico.inbox, badge: counts.unread },
+    { k:"analytics", label:"Analytics",  icon: Ico.chart },
+    { k:"settings",  label:"Settings",   icon: Ico.gear },
+  ];
+  return (
+    <aside className="w-[260px] shrink-0 h-full p-5 flex flex-col gap-6 border-r border-white/[0.06] relative z-10">
+      <div className="flex items-center gap-3 px-1">
+        <LogoMark size={36}/>
+        <div>
+          <div className="font-display font-bold text-[17px] tracking-tight">GALTRIX</div>
+          <div className="text-[10.5px] uppercase tracking-[0.22em] text-slate-500">Admin · v1.0</div>
+        </div>
+      </div>
+
+      <div className="text-[10.5px] uppercase tracking-[0.22em] text-slate-500 px-2 mt-1">Workspace</div>
+      <nav className="flex flex-col gap-1.5">
+        {items.map(it => {
+          const Icon = it.icon;
+          return (
+            <button key={it.k} className={"nav-item " + (view===it.k?"active":"")} onClick={()=>setView(it.k)}>
+              <Icon/>
+              <span className="flex-1 text-left">{it.label}</span>
+              {typeof it.badge === "number" && it.badge>0 && (
+                <span className="text-[10.5px] px-2 py-0.5 rounded-full font-semibold"
+                      style={{background:"linear-gradient(135deg,rgba(34,211,238,0.22),rgba(168,85,247,0.22))", color:"#eaf4ff", boxShadow:"inset 0 0 0 1px rgba(34,211,238,0.25)"}}>
+                  {it.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </nav>
+
+      <div className="mt-auto space-y-3">
+        <div className="glass rounded-2xl p-4">
+          <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-slate-400">
+            <Ico.plug/> Integrations
+          </div>
+          <div className="mt-3 space-y-2.5">
+            <IntegrationPill
+              label="Leads source"
+              state={sources?.formspree || "mock"}
+              hint={
+                sources?.formspree === "gmail"     ? "via Gmail inbox" :
+                sources?.formspree === "formspree" ? ("/f/"+(CONFIG.FORMSPREE_FORM_ID||"?")) :
+                "mock data"
+              }
+            />
+            <IntegrationPill
+              label="Gmail API"
+              state={sources?.gmail || "mock"}
+              hint={CONFIG.GMAIL_DESTINATION || "not set"}
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 px-2">
+          <div className="w-9 h-9 rounded-full grad-border flex items-center justify-center font-display font-bold text-sm">YG</div>
+          <div className="leading-tight">
+            <div className="text-[13px] font-semibold">Operator</div>
+            <div className="text-[11px] text-slate-500">admin@galtrix.com</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  );
+}
+function IntegrationPill({ label, state = "mock", hint }){
+  const live = state === "live" || state === "gmail" || state === "formspree";
+  const color = !live                 ? "#fbbf24"   // amber — mock
+              : state === "gmail"     ? "#22d3ee"   // cyan  — gmail path
+              : state === "formspree" ? "#a855f7"   // purple — formspree api
+              :                          "#34d399"; // green — generic live
+  const tag = !live ? "mock" : state === "gmail" ? "gmail" : state === "formspree" ? "api" : "live";
+  return (
+    <div className="flex items-center justify-between text-[12px]">
+      <div className="flex items-center gap-2">
+        <span className="w-1.5 h-1.5 rounded-full" style={{ background:color, boxShadow:`0 0 10px ${color}` }}/>
+        <span className="font-medium text-slate-200">{label}</span>
+      </div>
+      <div className="text-[11px] text-slate-500 truncate max-w-[140px]">{tag} · <span className="text-slate-600">{hint}</span></div>
+    </div>
+  );
+}
+
+/* ================= Header ================= */
+function Header({ query, setQuery, onRefresh, refreshing, liveLabel }){
+  return (
+    <header className="flex items-center gap-4 h-[72px] px-7 border-b border-white/[0.06] relative z-10">
+      <div className="flex items-center gap-3">
+        <div className="font-display text-[15px] tracking-tight text-slate-300">Dashboard</div>
+        <Ico.arrow className="text-slate-600"/>
+        <div className="font-display text-[15px] tracking-tight grad-text">Leads & Notifications</div>
+      </div>
+      <div className="flex-1"/>
+      <div className="relative w-[360px]">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"><Ico.search/></span>
+        <input className="input" placeholder="Search leads, emails, companies…" value={query} onChange={e=>setQuery(e.target.value)} />
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 kbd">⌘ K</span>
+      </div>
+      <button className="btn" onClick={onRefresh} disabled={refreshing}>
+        <Ico.refresh/> {refreshing?"Syncing…":"Sync"}
+      </button>
+      <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-slate-400 live">{liveLabel}</div>
+      <button className="relative btn" aria-label="Notifications">
+        <Ico.bell/>
+        <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-cyan-400" style={{boxShadow:"0 0 10px #22d3ee"}}/>
+      </button>
+    </header>
+  );
+}
+
+/* ================= KPI Cards ================= */
+function KpiCard({ label, value, delta, accent="cyan", points=[] }){
+  const color = accent === "cyan" ? "#22d3ee" : accent === "purple" ? "#a855f7" : "#34d399";
+  const path = useMemo(()=>{
+    if (!points.length) return "";
+    const w=160, h=40, max=Math.max(...points), min=Math.min(...points);
+    return points.map((p,i)=>{
+      const x = (i/(points.length-1))*w;
+      const y = h - ((p-min)/Math.max(1,max-min))*h;
+      return (i===0?"M":"L") + x.toFixed(1) + "," + y.toFixed(1);
+    }).join(" ");
+  },[points]);
+  return (
+    <div className="glass rounded-2xl p-5 relative overflow-hidden group">
+      <div className="absolute -right-8 -top-10 w-40 h-40 rounded-full opacity-40 pointer-events-none"
+           style={{background:`radial-gradient(circle, ${color}44, transparent 60%)`}}/>
+      <div className="flex items-center justify-between">
+        <div className="text-[11px] uppercase tracking-[0.22em] text-slate-400">{label}</div>
+        <span className="text-[10.5px] font-semibold flex items-center gap-1 px-2 py-0.5 rounded-full"
+              style={{background:"rgba(52,211,153,0.10)", color:"#6ee7b7", border:"1px solid rgba(52,211,153,0.25)"}}>
+          <Ico.up/> {delta}
+        </span>
+      </div>
+      <div className="mt-3 flex items-end justify-between">
+        <div className="font-display text-[34px] font-bold tracking-tight">{value}</div>
+        <svg viewBox="0 0 160 40" width="160" height="40" className="opacity-90">
+          <defs>
+            <linearGradient id={"sp-"+accent} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor={color} stopOpacity="0.6"/>
+              <stop offset="1" stopColor={color} stopOpacity="0"/>
+            </linearGradient>
+          </defs>
+          <path d={path+ " L160,40 L0,40 Z"} fill={`url(#sp-${accent})`}/>
+          <path d={path} className="spark-path" stroke={color}/>
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+/* ================= Leads Table ================= */
+function LeadsTable({ leads, filter, setFilter, query, selectedId, onSelect, onAction, counts }){
+  const filtered = useMemo(()=>{
+    let rows = leads;
+    if (filter !== "all") rows = rows.filter(l => l.status === filter);
+    const q = query.trim().toLowerCase();
+    if (q) rows = rows.filter(l => l.name.toLowerCase().includes(q) || l.email.toLowerCase().includes(q) || l.message.toLowerCase().includes(q));
+    return rows;
+  },[leads, filter, query]);
+
+  return (
+    <section className="glass rounded-2xl flex flex-col min-h-0">
+      <div className="flex items-center gap-4 px-5 pt-5 pb-4">
+        <div>
+          <div className="font-display text-[17px] font-semibold tracking-tight">Lead Pipeline</div>
+          <div className="text-[11.5px] text-slate-500 mt-0.5">Live submissions from the Galtrix contact form · Formspree</div>
+        </div>
+        <div className="flex-1"/>
+        <div className="seg">
+          <button className={filter==="all"?"on":""}        onClick={()=>setFilter("all")}>All <span className="n">{counts.all}</span></button>
+          <button className={filter==="new"?"on":""}        onClick={()=>setFilter("new")}>New <span className="n">{counts.new}</span></button>
+          <button className={filter==="contacted"?"on":""}  onClick={()=>setFilter("contacted")}>Contacted <span className="n">{counts.contacted}</span></button>
+          <button className={filter==="archived"?"on":""}   onClick={()=>setFilter("archived")}>Archived <span className="n">{counts.archived}</span></button>
+        </div>
+        <button className="btn"><Ico.export/> Export CSV</button>
+      </div>
+
+      <div className="divider"/>
+
+      <div className="grid grid-cols-[minmax(260px,2.2fr)_minmax(220px,1.6fr)_minmax(320px,2.6fr)_130px_110px_150px] gap-0 px-5 py-3 text-[10.5px] uppercase tracking-[0.18em] text-slate-500 border-b border-white/[0.04]">
+        <div>Client</div><div>Email</div><div>Message</div><div>Source</div><div>Status</div><div className="text-right pr-2">Actions</div>
+      </div>
+
+      <div className="scroll-y flex-1 min-h-0">
+        {filtered.length === 0 && (
+          <div className="py-16 text-center text-slate-500">
+            <div className="font-display text-[15px] text-slate-400">No matching leads</div>
+            <div className="text-[12.5px] mt-1">Try clearing filters or searching a different term.</div>
+          </div>
+        )}
+        {filtered.map(l => (
+          <div key={l.id}
+               className={"row grid grid-cols-[minmax(260px,2.2fr)_minmax(220px,1.6fr)_minmax(320px,2.6fr)_130px_110px_150px] items-center px-5 py-3.5 border-b border-white/[0.03] cursor-pointer " + (selectedId===l.id?"selected":"")}
+               onClick={()=>onSelect(l.id)}>
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-full flex items-center justify-center font-display font-semibold text-[12.5px] grad-border shrink-0">{initials(l.name)}</div>
+              <div className="min-w-0">
+                <div className="font-semibold text-[13.5px] truncate">{l.name}</div>
+                <div className="text-[11.5px] text-slate-500">{rel(l.submittedAt)}</div>
+              </div>
+            </div>
+            <div className="text-[13px] text-slate-300 truncate pr-4">{l.email}</div>
+            <div className="text-[12.5px] text-slate-400 truncate pr-4">{l.message}</div>
+            <div className="text-[11.5px] text-slate-400 font-mono">{l.source}</div>
+            <div><span className={"pill "+l.status}><span className="dot"></span>{l.status}</span></div>
+            <div className="flex items-center justify-end gap-1 pr-1" onClick={e=>e.stopPropagation()}>
+              <IconBtn title="Mark contacted"  onClick={()=>onAction(l.id,"contacted")}><Ico.check/></IconBtn>
+              <IconBtn title="Open email"      onClick={()=>window.location.href="mailto:"+l.email}><Ico.mail/></IconBtn>
+              <IconBtn title="Archive"         onClick={()=>onAction(l.id,"archived")}><Ico.archive/></IconBtn>
+              <IconBtn title="Delete"          danger onClick={()=>onAction(l.id,"delete")}><Ico.trash/></IconBtn>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+function IconBtn({ children, danger, ...p }){
+  return <button
+    {...p}
+    className={"w-8 h-8 rounded-lg border flex items-center justify-center transition-all " +
+               (danger ? "text-slate-400 border-white/[0.06] hover:text-red-300 hover:border-red-500/30 hover:bg-red-500/10"
+                       : "text-slate-400 border-white/[0.06] hover:text-cyan-200 hover:border-cyan-500/30 hover:bg-cyan-500/10")} />;
+}
+
+/* ================= Gmail Panel ================= */
+function GmailPanel({ notes, connected, configured, onOpen, onConnect, onDisconnect, loading }){
+  return (
+    <section className="glass rounded-2xl flex flex-col min-h-0">
+      <div className="flex items-center gap-3 px-5 pt-5 pb-3">
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+             style={{background:"linear-gradient(135deg, rgba(34,211,238,0.14), rgba(168,85,247,0.14))", border:"1px solid rgba(34,211,238,0.22)"}}>
+          <Ico.inbox/>
+        </div>
+        <div className="flex-1">
+          <div className="font-display text-[15px] font-semibold tracking-tight">Gmail Notifications</div>
+          <div className="text-[11px] text-slate-500 mt-0.5">{CONFIG.GMAIL_DESTINATION || "destination not set"}</div>
+        </div>
+        {connected ? (
+          <>
+            <span className="pill new"><span className="dot"/>Live</span>
+            <button className="btn" onClick={onDisconnect} title="Sign out">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M16 17l5-5-5-5M21 12H9M13 21H6a2 2 0 01-2-2V5a2 2 0 012-2h7"/></svg>
+            </button>
+          </>
+        ) : (
+          <button className="btn primary" onClick={onConnect} disabled={!configured || loading}>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M22 6l-10 7L2 6"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
+            {loading ? "Connecting…" : "Connect Gmail"}
+          </button>
+        )}
+      </div>
+      {!configured && (
+        <div className="mx-5 mb-2 text-[11.5px] text-slate-400 px-3 py-2 rounded-lg hairline fade-in"
+             style={{background:"rgba(234,179,8,0.04)", borderColor:"rgba(234,179,8,0.18)"}}>
+          Add <span className="font-mono text-amber-300">GMAIL_CLIENT_ID</span> &amp; <span className="font-mono text-amber-300">GMAIL_API_KEY</span> to <span className="font-mono">CONFIG</span> in <span className="font-mono">dashboard.html</span>, then click Connect. Showing simulated inbox meanwhile.
+        </div>
+      )}
+      {configured && !connected && (
+        <div className="mx-5 mb-2 text-[11.5px] text-slate-400 px-3 py-2 rounded-lg hairline fade-in"
+             style={{background:"rgba(34,211,238,0.04)", borderColor:"rgba(34,211,238,0.18)"}}>
+          Sign in with <span className="text-cyan-300 font-mono">{CONFIG.GMAIL_DESTINATION}</span> to stream real Formspree notifications from your inbox.
+        </div>
+      )}
+      <div className="divider mt-1"/>
+      <div className="scroll-y flex-1 min-h-0 px-2 py-2">
+        {notes.map(n => (
+          <div key={n.id} onClick={()=>onOpen(n.linkedLeadId)}
+               className="px-3 py-3 mx-1 my-0.5 rounded-xl cursor-pointer hover:bg-white/[0.03] transition-all">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-gradient-to-br from-cyan-500/15 to-purple-500/15 hairline">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#c4b5fd" strokeWidth="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 7 9-7"/></svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-[12.5px] font-semibold truncate">{n.subject}</span>
+                  {n.unread && <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" style={{boxShadow:"0 0 8px #22d3ee"}}/>}
+                </div>
+                <div className="text-[11px] text-slate-500 truncate font-mono">{n.from}</div>
+              </div>
+              <div className="text-[11px] text-slate-500 shrink-0">{rel(n.receivedAt)}</div>
+            </div>
+            <div className="text-[12px] text-slate-400 mt-1.5 line-clamp-1 pl-9">{n.preview}</div>
+          </div>
+        ))}
+        {notes.length===0 && <div className="py-16 text-center text-slate-500 text-[12.5px]">No notifications.</div>}
+      </div>
+    </section>
+  );
+}
+
+/* ================= Lead Detail Panel ================= */
+function LeadPanel({ lead, onClose, onAction }){
+  if (!lead) return null;
+  return (
+    <aside className="w-[440px] shrink-0 h-full glass-strong border-l border-white/[0.06] flex flex-col slide-in">
+      <div className="flex items-center gap-3 px-6 pt-6 pb-4">
+        <div className="w-11 h-11 rounded-full flex items-center justify-center font-display font-semibold text-[14px] grad-border">{initials(lead.name)}</div>
+        <div className="flex-1 min-w-0">
+          <div className="font-display text-[17px] font-semibold tracking-tight truncate">{lead.name}</div>
+          <div className="text-[12px] text-slate-500 truncate">{lead.email}</div>
+        </div>
+        <button className="btn" onClick={onClose}><Ico.close/></button>
+      </div>
+      <div className="divider"/>
+
+      <div className="scroll-y flex-1 min-h-0 px-6 py-5 space-y-5">
+        <div className="flex items-center gap-2">
+          <span className={"pill "+lead.status}><span className="dot"/>{lead.status}</span>
+          <span className="pill archived"><span className="dot"/>{lead.source}</span>
+          <span className="pill archived"><span className="dot"/>{fullDate(lead.submittedAt)}</span>
+        </div>
+
+        <div>
+          <div className="text-[10.5px] uppercase tracking-[0.22em] text-slate-500 mb-2">Message</div>
+          <div className="glass rounded-xl p-4 text-[13.5px] leading-relaxed text-slate-200">{lead.message}</div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <button className="btn primary justify-center" onClick={()=>window.location.href="mailto:"+lead.email+"?subject=Re%3A%20Your%20Galtrix%20inquiry"}><Ico.mail/> Reply via Email</button>
+          <button className="btn justify-center" onClick={()=>onAction(lead.id,"contacted")}><Ico.check/> Mark Contacted</button>
+          <button className="btn justify-center" onClick={()=>onAction(lead.id,"archived")}><Ico.archive/> Archive</button>
+          <button className="btn danger justify-center" onClick={()=>onAction(lead.id,"delete")}><Ico.trash/> Delete</button>
+        </div>
+
+        <div>
+          <div className="text-[10.5px] uppercase tracking-[0.22em] text-slate-500 mb-3">Activity</div>
+          <div className="relative pl-5 space-y-4">
+            <div className="absolute left-[6px] top-1.5 bottom-1 w-px bg-gradient-to-b from-cyan-400/40 via-purple-400/30 to-transparent"/>
+            {[...lead.history].reverse().map((h,i)=>(
+              <div key={i} className="relative">
+                <span className="absolute -left-[13px] top-1 w-2.5 h-2.5 rounded-full bg-cyan-400" style={{boxShadow:"0 0 10px #22d3ee"}}/>
+                <div className="text-[12.5px] text-slate-200 font-medium capitalize">{h.t}</div>
+                <div className="text-[11.5px] text-slate-500">{fullDate(h.at)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div className="text-[10.5px] uppercase tracking-[0.22em] text-slate-500 mb-2">Raw payload</div>
+          <pre className="glass rounded-xl p-3 text-[11.5px] font-mono text-slate-400 leading-relaxed overflow-x-auto">{JSON.stringify({name:lead.name,email:lead.email,source:lead.source,status:lead.status,submittedAt:lead.submittedAt}, null, 2)}</pre>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+/* ================= Chart (weekly leads) ================= */
+function WeeklyChart({ series }){
+  const max = Math.max(6, ...series.map(s=>s.count));
+  return (
+    <div className="glass rounded-2xl p-5">
+      <div className="flex items-center">
+        <div>
+          <div className="font-display text-[15px] font-semibold tracking-tight">Weekly Volume</div>
+          <div className="text-[11px] text-slate-500 mt-0.5">New submissions per day · last 14 days</div>
+        </div>
+        <div className="flex-1"/>
+        <div className="flex items-center gap-4 text-[11px] text-slate-500">
+          <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-cyan-400 inline-block"/>Submissions</span>
+        </div>
+      </div>
+      <svg viewBox="0 0 560 140" className="mt-4 w-full h-[160px]">
+        <defs>
+          <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#22d3ee" stopOpacity="0.9"/>
+            <stop offset="1" stopColor="#a855f7" stopOpacity="0.25"/>
+          </linearGradient>
+        </defs>
+        {[0,0.25,0.5,0.75,1].map((p,i)=>(
+          <line key={i} x1="0" y1={10+ p*110} x2="560" y2={10+ p*110} stroke="rgba(148,163,184,0.08)"/>
+        ))}
+        {series.map((s,i)=>{
+          const bw = 560 / series.length;
+          const h = (s.count/max)*110;
+          const x = i*bw + 6;
+          const y = 120 - h;
+          return (
+            <g key={i}>
+              <rect x={x} y={y} width={bw-12} height={h} rx="4" className="bar"/>
+              <text x={x + (bw-12)/2} y="136" textAnchor="middle" fontSize="10" fill="#64748b">{s.label}</text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+/* ================= Status breakdown ring ================= */
+function StatusRing({ counts }){
+  const total = Math.max(1, counts.all);
+  const items = [
+    { k:"new",       n: counts.new,       color:"#22d3ee" },
+    { k:"contacted", n: counts.contacted, color:"#a855f7" },
+    { k:"archived",  n: counts.archived,  color:"#475569" },
+  ];
+  let acc = 0;
+  const R = 54, C = 2*Math.PI*R;
+  return (
+    <div className="glass rounded-2xl p-5">
+      <div className="font-display text-[15px] font-semibold tracking-tight">Pipeline Health</div>
+      <div className="text-[11px] text-slate-500 mt-0.5">Distribution across statuses</div>
+      <div className="flex items-center gap-6 mt-3">
+        <svg viewBox="0 0 140 140" width="150" height="150">
+          <circle cx="70" cy="70" r={R} stroke="rgba(148,163,184,0.10)" strokeWidth="14" fill="none"/>
+          {items.map((it,i)=>{
+            const frac = it.n/total;
+            const len = frac*C;
+            const el = (
+              <circle key={i} cx="70" cy="70" r={R} stroke={it.color} strokeWidth="14" fill="none"
+                      strokeDasharray={`${len} ${C-len}`} strokeDashoffset={-acc} transform="rotate(-90 70 70)" strokeLinecap="butt"/>
+            );
+            acc += len;
+            return el;
+          })}
+          <text x="70" y="68" textAnchor="middle" fontSize="22" fontWeight="700" fill="#eaf4ff" style={{fontFamily:"Space Grotesk"}}>{counts.all}</text>
+          <text x="70" y="86" textAnchor="middle" fontSize="10" fill="#64748b" letterSpacing="2" style={{textTransform:"uppercase"}}>Total leads</text>
+        </svg>
+        <div className="flex-1 space-y-2.5">
+          {items.map((it,i)=>(
+            <div key={i} className="flex items-center gap-3">
+              <span className="w-2.5 h-2.5 rounded-full" style={{background:it.color, boxShadow:`0 0 10px ${it.color}`}}/>
+              <span className="text-[13px] font-medium capitalize flex-1">{it.k}</span>
+              <span className="text-[12.5px] text-slate-300 font-mono">{it.n}</span>
+              <span className="text-[11px] text-slate-500 w-10 text-right">{Math.round((it.n/total)*100)}%</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ================= Settings View ================= */
+function SettingsView(){
+  return (
+    <div className="grid grid-cols-2 gap-5">
+      <div className="glass rounded-2xl p-6 space-y-4">
+        <div>
+          <div className="font-display text-[16px] font-semibold">Formspree</div>
+          <div className="text-[12px] text-slate-500 mt-0.5">Connect to fetch live submissions.</div>
+        </div>
+        <SettingsField label="Form ID" hint="at the end of your form URL" value={CONFIG.FORMSPREE_FORM_ID || "not set"}/>
+        <SettingsField label="Personal Access Token" hint="formspree.io/account/api" value={CONFIG.FORMSPREE_API_KEY ? "•••••••••••• configured" : "not set"}/>
+        <div className="text-[11.5px] text-slate-500 font-mono p-3 rounded-lg hairline">
+          Edit <span className="text-cyan-300">CONFIG.FORMSPREE_FORM_ID</span> and <span className="text-cyan-300">CONFIG.FORMSPREE_API_KEY</span> near the top of <span className="text-purple-300">dashboard.html</span>.
+        </div>
+      </div>
+      <div className="glass rounded-2xl p-6 space-y-4">
+        <div>
+          <div className="font-display text-[16px] font-semibold">Gmail</div>
+          <div className="text-[12px] text-slate-500 mt-0.5">Read new-lead notifications from your inbox.</div>
+        </div>
+        <SettingsField label="OAuth Client ID" hint="Google Cloud Console" value={CONFIG.GMAIL_CLIENT_ID || "not set"}/>
+        <SettingsField label="API Key"          hint="Google Cloud Console" value={CONFIG.GMAIL_API_KEY ? "•••••••••••• configured" : "not set"}/>
+        <SettingsField label="Destination inbox" hint="where Formspree sends notifications" value={CONFIG.GMAIL_DESTINATION || "not set"}/>
+        <SettingsField label="Query" hint="Gmail search syntax" value={CONFIG.GMAIL_QUERY}/>
+      </div>
+    </div>
+  );
+}
+function SettingsField({ label, hint, value }){
+  return (
+    <div>
+      <div className="flex items-baseline gap-3">
+        <div className="text-[12px] font-semibold text-slate-200">{label}</div>
+        <div className="text-[11px] text-slate-500">{hint}</div>
+      </div>
+      <div className="mt-1.5 px-3 py-2.5 rounded-lg hairline font-mono text-[12px] text-slate-300 bg-black/20">{value}</div>
+    </div>
+  );
+}
+
+/* ================= App ================= */
+function App(){
+  const [view, setView] = useState("overview");
+  const [leads, setLeads] = useState([]);
+  const [notes, setNotes] = useState([]);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("all");
+  const [selectedId, setSelectedId] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [sources, setSources] = useState({ formspree: "mock", gmail: "mock" });
+  const [gmailConnected, setGmailConnected] = useState(false);
+  const [gmailLoading, setGmailLoading] = useState(false);
+
+  const matchGmailToLeads = (notes, leads) => {
+    return notes.map(n => {
+      // Try matching by finding a lead whose email appears in the snippet
+      // or whose name appears in the subject (Formspree subjects include the name).
+      const match = leads.find(l =>
+        (n.subject || "").toLowerCase().includes((l.name || "").toLowerCase()) ||
+        (n.preview || "").toLowerCase().includes((l.email || "").toLowerCase())
+      );
+      return { ...n, linkedLeadId: match ? match.id : null };
+    });
+  };
+
+  const loadAll = useCallback(async () => {
+    setRefreshing(true);
+
+    // Lead source priority:
+    //   1. Gmail (parses Formspree notification emails directly — works on any plan)
+    //   2. Formspree Submissions API proxy (paid plan, if FORMSPREE_PAT set in SWA)
+    //   3. Mock data
+    let baseLeads = null, leadsSource = "mock";
+    if (Gmail.accessToken) {
+      try { baseLeads = await Gmail.fetchLeads(); if (baseLeads) leadsSource = "gmail"; }
+      catch(e){ console.warn("[Gmail leads] failed:", e); }
+    }
+    if (!baseLeads) {
+      const fs = await fetchFormspreeLeads();
+      if (fs) { baseLeads = fs; leadsSource = "formspree"; }
+    }
+    if (!baseLeads) baseLeads = buildMockLeads();
+    setLeads(baseLeads);
+
+    // Gmail notifications panel (always the raw Formspree emails if connected)
+    const gm = await fetchGmailNotifications();
+    const resolvedNotes = gm ? matchGmailToLeads(gm, baseLeads) : buildMockGmail(baseLeads);
+    setNotes(resolvedNotes);
+
+    setSources({ formspree: leadsSource, gmail: gm ? "live" : "mock" });
+    setGmailConnected(!!Gmail.accessToken);
+    setRefreshing(false);
+  }, []);
+
+  // Attempt silent Gmail init on load (restores an existing session if any)
+  useEffect(()=>{
+    (async () => {
+      if (!Gmail.isConfigured()) return;
+      try {
+        await Gmail.init();
+        if (Gmail.accessToken) {
+          setGmailConnected(true);
+          // Let loadAll fetch notifications now that we have a token
+          loadAll();
+        }
+      } catch (e) { console.warn("Gmail init:", e.message); }
+    })();
+  },[loadAll]);
+
+  const connectGmail = useCallback(async () => {
+    setGmailLoading(true);
+    try {
+      await Gmail.init();
+      await Gmail.signIn();
+      setGmailConnected(true);
+      await loadAll();
+    } catch(e) {
+      console.error("Gmail sign-in failed:", e);
+      alert("Gmail sign-in failed: " + (e.message || e));
+    } finally {
+      setGmailLoading(false);
+    }
+  },[loadAll]);
+
+  const disconnectGmail = useCallback(() => {
+    Gmail.signOut();
+    setGmailConnected(false);
+    setSources(s => ({ ...s, gmail: "mock" }));
+    setNotes(buildMockGmail(leads));
+  },[leads]);
+
+  useEffect(()=>{ loadAll(); },[loadAll]);
+
+  // ⌘K focuses search
+  useEffect(()=>{
+    const h = (e)=>{
+      if ((e.metaKey||e.ctrlKey) && e.key.toLowerCase()==="k"){ e.preventDefault(); const el=document.querySelector(".input"); if (el) el.focus(); }
+      if (e.key === "Escape") setSelectedId(null);
+    };
+    window.addEventListener("keydown", h); return ()=>window.removeEventListener("keydown", h);
+  },[]);
+
+  const counts = useMemo(()=>({
+    all:       leads.length,
+    new:       leads.filter(l=>l.status==="new").length,
+    contacted: leads.filter(l=>l.status==="contacted").length,
+    archived:  leads.filter(l=>l.status==="archived").length,
+    unread:    notes.filter(n=>n.unread).length,
+  }),[leads, notes]);
+
+  const weekSeries = useMemo(()=>{
+    const days = 14;
+    const buckets = [];
+    for (let i=days-1;i>=0;i--){
+      const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-i);
+      const nxt = new Date(d); nxt.setDate(d.getDate()+1);
+      const count = leads.filter(l => { const t=new Date(l.submittedAt); return t>=d && t<nxt; }).length;
+      buckets.push({ label: d.toLocaleDateString(undefined,{weekday:"short"}).slice(0,2), count });
+    }
+    return buckets;
+  },[leads]);
+
+  const weekDelta = useMemo(()=>{
+    const now = Date.now();
+    const lastWeek = leads.filter(l => now - new Date(l.submittedAt) < 7*86400000).length;
+    const prevWeek = leads.filter(l => { const d = now - new Date(l.submittedAt); return d >= 7*86400000 && d < 14*86400000; }).length;
+    if (!prevWeek) return "+"+lastWeek;
+    const pct = Math.round(((lastWeek-prevWeek)/prevWeek)*100);
+    return (pct>=0?"+":"") + pct + "%";
+  },[leads]);
+
+  const conversionRate = counts.all ? Math.round((counts.contacted/counts.all)*100) : 0;
+  const selected = leads.find(l=>l.id===selectedId) || null;
+
+  const onAction = (id, t) => {
+    if (t === "delete"){
+      setLeads(ls => ls.filter(l => l.id !== id));
+      if (selectedId===id) setSelectedId(null);
+      return;
+    }
+    setLeads(ls => ls.map(l => l.id===id ? {...l, status:t, history:[...l.history, { t, at:new Date().toISOString() }]} : l));
+  };
+
+  const openFromInbox = (leadId) => {
+    if (leadId){ setView("leads"); setSelectedId(leadId); }
+  };
+
+  const leadSourceLabel =
+    sources.formspree === "gmail"     ? "LIVE · GMAIL (FORMSPREE EMAILS)" :
+    sources.formspree === "formspree" ? "LIVE · FORMSPREE API"            :
+    "MOCK · LEADS";
+  const liveLabel = `${leadSourceLabel}  /  ${sources.gmail.toUpperCase()} · INBOX`;
+
+  return (
+    <div className="h-full w-full flex relative z-10">
+      <Sidebar view={view} setView={setView} counts={counts} sources={sources}/>
+
+      <div className="flex-1 flex flex-col min-w-0">
+        <Header query={query} setQuery={setQuery} onRefresh={loadAll} refreshing={refreshing} liveLabel={liveLabel}/>
+
+        <main className="flex-1 min-h-0 flex overflow-hidden">
+          <div className="flex-1 min-w-0 p-6 flex flex-col gap-5 overflow-hidden">
+            {view === "overview" && (
+              <OverviewView counts={counts} weekSeries={weekSeries} weekDelta={weekDelta}
+                            conversionRate={conversionRate} leads={leads} notes={notes}
+                            onSelect={setSelectedId} onAction={onAction}
+                            filter={filter} setFilter={setFilter} query={query} selectedId={selectedId} />
+            )}
+            {view === "leads" && (
+              <LeadsTable leads={leads} filter={filter} setFilter={setFilter} query={query}
+                          selectedId={selectedId} onSelect={setSelectedId}
+                          onAction={onAction} counts={counts}/>
+            )}
+            {view === "inbox" && (
+              <div className="grid grid-cols-1 gap-5 min-h-0 flex-1">
+                <GmailPanel notes={notes} connected={gmailConnected} configured={Gmail.isConfigured()} loading={gmailLoading} onConnect={connectGmail} onDisconnect={disconnectGmail} onOpen={openFromInbox}/>
+              </div>
+            )}
+            {view === "analytics" && (
+              <AnalyticsView counts={counts} weekSeries={weekSeries} weekDelta={weekDelta} conversionRate={conversionRate} leads={leads}/>
+            )}
+            {view === "settings" && <SettingsView/>}
+          </div>
+
+          {view === "overview" && (
+            <div className="w-[380px] shrink-0 h-full border-l border-white/[0.06] p-6 pl-5 flex flex-col gap-5 overflow-hidden">
+              <GmailPanel notes={notes} connected={gmailConnected} configured={Gmail.isConfigured()} loading={gmailLoading} onConnect={connectGmail} onDisconnect={disconnectGmail} onOpen={openFromInbox}/>
+            </div>
+          )}
+        </main>
+      </div>
+
+      {selected && <LeadPanel lead={selected} onClose={()=>setSelectedId(null)} onAction={onAction}/>}
+    </div>
+  );
+}
+
+/* ================= Overview ================= */
+function OverviewView({ counts, weekSeries, weekDelta, conversionRate, leads, notes, onSelect, onAction, filter, setFilter, query, selectedId }){
+  const thisWeek = leads.filter(l => Date.now() - new Date(l.submittedAt) < 7*86400000).length;
+
+  const kpiSeries = useMemo(()=>{
+    const total = Array(14).fill(0), newL = Array(14).fill(0), cont = Array(14).fill(0);
+    for (let i=0;i<14;i++){ total[i] = weekSeries[i]?.count ?? 0; }
+    // Simulated trend for contacted/conversion
+    const rn = (s) => { let x=s; return ()=>{ x=(x*9301+49297)%233280; return x/233280; }; };
+    const r = rn(leads.length+7);
+    for (let i=0;i<14;i++){ newL[i] = Math.max(0, total[i] - Math.floor(r()*2)); cont[i] = Math.max(0, Math.floor(total[i]*0.6 + r()*2)); }
+    return { total, newL, cont };
+  },[weekSeries, leads.length]);
+
+  return (
+    <>
+      <div className="grid grid-cols-4 gap-5">
+        <KpiCard label="Total Leads"    value={fmt(counts.all)}       delta={weekDelta}   accent="cyan"   points={kpiSeries.total}/>
+        <KpiCard label="New · 7d"       value={fmt(thisWeek)}         delta={weekDelta}   accent="purple" points={kpiSeries.newL}/>
+        <KpiCard label="Contacted"      value={fmt(counts.contacted)} delta="+12%"       accent="cyan"   points={kpiSeries.cont}/>
+        <KpiCard label="Conversion"     value={conversionRate+"%"}    delta="+4.2%"      accent="purple" points={kpiSeries.cont}/>
+      </div>
+
+      <div className="grid grid-cols-3 gap-5">
+        <div className="col-span-2"><WeeklyChart series={weekSeries}/></div>
+        <StatusRing counts={counts}/>
+      </div>
+
+      <div className="flex-1 min-h-0">
+        <LeadsTable leads={leads} filter={filter} setFilter={setFilter} query={query}
+                    selectedId={selectedId} onSelect={onSelect}
+                    onAction={onAction} counts={counts}/>
+      </div>
+    </>
+  );
+}
+
+/* ================= Analytics ================= */
+function AnalyticsView({ counts, weekSeries, weekDelta, conversionRate, leads }){
+  const bySource = useMemo(()=>{
+    const m = new Map();
+    for (const l of leads){ m.set(l.source, (m.get(l.source)||0)+1); }
+    return [...m.entries()].sort((a,b)=>b[1]-a[1]);
+  },[leads]);
+  const max = Math.max(1, ...bySource.map(([,n])=>n));
+  return (
+    <>
+      <div className="grid grid-cols-4 gap-5">
+        <KpiCard label="Total Leads" value={fmt(counts.all)}       delta={weekDelta}    accent="cyan"   points={weekSeries.map(s=>s.count)}/>
+        <KpiCard label="New"         value={fmt(counts.new)}       delta={"+"+fmt(counts.new)} accent="purple" points={weekSeries.map(s=>s.count)}/>
+        <KpiCard label="Contacted"   value={fmt(counts.contacted)} delta="+12%"         accent="cyan"   points={weekSeries.map(s=>s.count)}/>
+        <KpiCard label="Conversion"  value={conversionRate+"%"}    delta="+4.2%"        accent="purple" points={weekSeries.map(s=>s.count)}/>
+      </div>
+      <div className="grid grid-cols-3 gap-5">
+        <div className="col-span-2"><WeeklyChart series={weekSeries}/></div>
+        <StatusRing counts={counts}/>
+      </div>
+      <div className="glass rounded-2xl p-5">
+        <div className="font-display text-[15px] font-semibold tracking-tight">Leads by source</div>
+        <div className="text-[11px] text-slate-500 mt-0.5">Where your inbound conversations originate</div>
+        <div className="mt-4 space-y-3">
+          {bySource.map(([s,n])=>(
+            <div key={s} className="flex items-center gap-3">
+              <div className="w-36 text-[13px] font-medium text-slate-200 font-mono truncate">{s}</div>
+              <div className="flex-1 h-2 rounded-full bg-white/[0.04] overflow-hidden">
+                <div className="h-full rounded-full" style={{ width: ((n/max)*100)+"%", background:"linear-gradient(90deg,#22d3ee,#a855f7)" }}/>
+              </div>
+              <div className="w-10 text-right text-[12.5px] text-slate-300 font-mono">{n}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

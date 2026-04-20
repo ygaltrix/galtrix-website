@@ -487,6 +487,20 @@ const Gmail = {
     } catch { return ""; }
   },
 
+  // Decode HTML entities — numeric (&#39;, &#x27;) and named (&amp; &nbsp; &quot; …)
+  _decodeHtmlEntities(s){
+    if (!s) return "";
+    return s
+      .replace(/&#(\d+);/g,         (_, n) => String.fromCharCode(parseInt(n, 10)))
+      .replace(/&#x([0-9a-fA-F]+);/g,(_, h) => String.fromCharCode(parseInt(h, 16)))
+      .replace(/&nbsp;/gi, " ")
+      .replace(/&amp;/gi,  "&")
+      .replace(/&lt;/gi,   "<")
+      .replace(/&gt;/gi,   ">")
+      .replace(/&quot;/gi, '"')
+      .replace(/&apos;/gi, "'");
+  },
+
   // Walk payload parts, prefer text/plain, fall back to text/html
   _extractBody(payload){
     if (!payload) return "";
@@ -504,69 +518,61 @@ const Gmail = {
     const found = walk(payload);
     if (!found) return "";
     const raw = this._decodeB64Url(found.data);
-    if (found.mime === "plain") return raw;
-    // Strip HTML → text
-    return raw
+    if (found.mime === "plain") return this._decodeHtmlEntities(raw);
+    // Strip HTML → text. Block-level closing tags become newlines so fields separate cleanly.
+    const text = raw
       .replace(/<style[\s\S]*?<\/style>/gi, " ")
       .replace(/<script[\s\S]*?<\/script>/gi, " ")
-      .replace(/<br\s*\/?>/gi, "\n")
-      .replace(/<\/p>/gi, "\n")
-      .replace(/<\/tr>/gi, "\n")
-      .replace(/<\/td>/gi, ": ")
-      .replace(/<[^>]+>/g, "")
-      .replace(/&nbsp;/g, " ")
-      .replace(/&amp;/g, "&")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/&#39;/g, "'")
-      .replace(/&quot;/g, '"');
+      .replace(/<br\s*\/?>/gi,  "\n")
+      .replace(/<\/(p|div|tr|td|th|li|h[1-6])>/gi, "\n")
+      .replace(/<[^>]+>/g, "");
+    return this._decodeHtmlEntities(text);
   },
 
-  // Parse a Formspree notification email body into the fields of the form.
-  // Handles BOTH layouts Formspree uses in the wild:
-  //   (a) "fieldName: value"              — classic single-line key-value
-  //   (b) "fieldName\nvalue"              — label on one line, value on the next
-  //                                         (current default template)
+  // Parse a Formspree notification email body into form fields.
+  // Only trusts lines whose LABEL matches a known contact-form field, which
+  // prevents random intro prose from being accidentally promoted to a field.
   _parseFormspreeBody(text){
     if (!text) return {};
     const out = {};
 
-    // Known Formspree / contact-form field labels. When a line matches one of
-    // these exactly (lowercased, no spaces), treat it as a label and take the
-    // next non-empty line as the value.
     const knownFields = new Set([
       "fullname","name","firstname","lastname","email","emailaddress",
       "project","message","comments","comment","subject","phone","phonenumber",
       "source","company","budget","timeline","country","website","url",
     ]);
 
-    const lines = text.split(/\r?\n/).map(l => l.trim());
-    const kv = /^([A-Za-z][A-Za-z0-9_\- ]{0,40})\s*[:=]\s*(.+)$/;
+    // Normalize runs of whitespace inside each line but keep the line breaks
+    const lines = text.split(/\r?\n/).map(l => l.replace(/[ \t]+/g, " ").trim());
+    // Inline "label: value" — label can have a trailing colon, spaces, etc.
+    const kvInline = /^([A-Za-z][A-Za-z0-9_\- ]{0,30})\s*[:=]\s*(.*)$/;
 
     let lastKey = null;
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
 
-      // Blank line ends any continuation context
-      if (!line) { lastKey = null; continue; }
+      // Blank/divider ends continuation
+      if (!line || /^[-=_*]{2,}$/.test(line)) { lastKey = null; continue; }
 
-      // Strategy (a): inline key:value
-      const m = line.match(kv);
+      // Strategy A — inline "knownField: value"
+      const m = line.match(kvInline);
       if (m) {
-        const key = m[1].trim().toLowerCase().replace(/\s+/g,"");
-        out[key] = (m[2] || "").trim();
-        lastKey = key;
+        const key = m[1].trim().toLowerCase().replace(/\s+/g, "");
+        if (knownFields.has(key)) {
+          out[key] = (m[2] || "").trim();
+          lastKey = out[key] ? null : key;   // if value empty, next line continues
+          continue;
+        }
+      }
+
+      // Strategy B — the whole line IS a known field label; next non-empty line is the value
+      const asLabel = line.toLowerCase().replace(/[:=]+$/,"").replace(/\s+/g, "");
+      if (line.length <= 40 && knownFields.has(asLabel) && !out[asLabel]) {
+        lastKey = asLabel;
         continue;
       }
 
-      // Strategy (b): line IS a known field label → next non-empty line is the value
-      const normalizedKey = line.toLowerCase().replace(/\s+/g,"");
-      if (line.length <= 40 && knownFields.has(normalizedKey) && !out[normalizedKey]) {
-        lastKey = normalizedKey;
-        continue;
-      }
-
-      // Otherwise: continuation of the previous value (multi-line messages)
+      // Strategy C — continuation of the previous labeled value
       if (lastKey) {
         out[lastKey] = out[lastKey] ? (out[lastKey] + " " + line).trim() : line;
       }
@@ -613,25 +619,34 @@ const Gmail = {
   async fetchLeads(max = 50){
     if (!this.accessToken) return null;
     const msgs = await this._fetchFullMessages(CONFIG.GMAIL_QUERY, max);
-    return msgs.map(r => {
+
+    const leads = msgs.map(r => {
       const headers = Object.fromEntries(((r.payload && r.payload.headers) || []).map(h => [h.name.toLowerCase(), h.value]));
       const body = this._extractBody(r.payload);
       const fields = this._parseFormspreeBody(body);
 
-      // Lead email: prefer Reply-To (Formspree sets this to the submitter),
-      // then any parsed "email" field, then fall back to the snippet.
+      // Lead email: Reply-To (Formspree sets it to the submitter) → parsed email → dash
       const replyTo = headers["reply-to"] || "";
       const replyMatch = replyTo.match(/<([^>]+)>/);
       const email = (replyMatch ? replyMatch[1] : replyTo) || fields.email || "—";
 
-      // Lead name: prefer parsed fullName/name, then the subject tail
-      // (Formspree default subject is "New submission from <name>").
-      const subj = headers["subject"] || "";
-      const subjMatch = subj.match(/new submission from\s+(.+)$/i);
-      const name = fields.fullname || fields.name || (subjMatch ? subjMatch[1].trim() : (email.split("@")[0] || "Unknown"));
+      // Lead name: parsed fullName/name → email prefix. Subject is ignored now
+      // because Formspree's default subject uses the form name, not the submitter.
+      const prefix = (email.includes("@") ? email.split("@")[0] : "").replace(/[._-]+/g, " ").trim();
+      const niceName = prefix ? prefix.replace(/\b\w/g, c => c.toUpperCase()) : "Unknown";
+      const name = fields.fullname || fields.name || niceName;
 
-      // Message: prefer parsed "project" / "message", else fall back to snippet
-      const message = fields.project || fields.message || fields.comments || (r.snippet || "").slice(0, 600);
+      // Message: parsed project/message/comments → decoded snippet (with intro stripped)
+      let message = fields.project || fields.message || fields.comments || "";
+      if (!message) {
+        const snippet = this._decodeHtmlEntities(r.snippet || "");
+        // Drop Formspree's boilerplate intro if present
+        message = snippet
+          .replace(/^.*?Here's what they had to say[:\s]*/i, "")
+          .replace(/^.*?received a new form submission[.\s-]*/i, "")
+          .trim()
+          .slice(0, 600);
+      }
 
       const source = fields.source || "Formspree → Gmail";
       const submittedAt = headers["date"] ? new Date(headers["date"]).toISOString() : new Date(+r.internalDate || Date.now()).toISOString();
@@ -646,8 +661,16 @@ const Gmail = {
         status: (r.labelIds || []).includes("UNREAD") ? "new" : "contacted",
         history: [{ t: "submitted", at: submittedAt }],
         _gmailId: r.id,
+        _debugFields: fields,     // visible in DevTools if you inspect a lead in React devtools
       };
     });
+
+    // One-shot debug log for the first parsed lead so you can see exactly what came out
+    if (leads.length) {
+      const first = leads[0];
+      console.log("[Gmail] First parsed lead:", { name: first.name, email: first.email, message: first.message.slice(0, 120) + (first.message.length > 120 ? "…" : ""), fields: first._debugFields });
+    }
+    return leads;
   },
 };
 

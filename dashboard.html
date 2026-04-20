@@ -232,7 +232,10 @@ const CONFIG = {
   GMAIL_CLIENT_ID:   "621211234191-0eriv1u9mfg6slnelid60d41ff1e3e9k.apps.googleusercontent.com",
   GMAIL_API_KEY:     "AIzaSyAdHa_6vfSFUFay-1peBtUFYGZSfpY0teQ",
   GMAIL_DESTINATION: "info@galtrix.net",    // mailbox you sign in with (change if different)
-  GMAIL_QUERY:       'from:(no-reply@formspree.io) newer_than:30d',
+  // Broad query that catches all Formspree sender variants + any "new submission" subject.
+  // Tighten this (e.g. `from:no-reply@formspree.io newer_than:30d`) once you know
+  // your exact sender. See console.log output below for what the dashboard found.
+  GMAIL_QUERY:       '(from:formspree.io OR subject:"new submission") newer_than:90d',
   GMAIL_SCOPE:       'https://www.googleapis.com/auth/gmail.readonly',
   GMAIL_DISCOVERY:   'https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest',
 };
@@ -536,6 +539,7 @@ const Gmail = {
     if (!this.accessToken) return [];
     const listJson = await this._api("users/me/messages", { q, maxResults: max });
     const ids = (listJson.messages || []).map(m => m.id);
+    console.log(`[Gmail] query="${q}"  →  ${ids.length} message(s) matched (resultSizeEstimate=${listJson.resultSizeEstimate ?? "?"})`);
     if (!ids.length) return [];
     const msgs = await Promise.all(ids.map(id =>
       this._api(`users/me/messages/${encodeURIComponent(id)}`, { format: "full" })

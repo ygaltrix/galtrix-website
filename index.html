@@ -902,11 +902,96 @@ function Contact(){
   );
 }
 
+function Legal(){
+  const sections = [
+    {
+      id:'privacy',
+      accent:'cyan',
+      eyebrow:'Privacy',
+      title:'How we handle your information.',
+      blocks:[
+        { h:'Our commitment', p:'At GALTRIX, we respect your privacy and handle personal information with care. This notice explains what we collect, how it is used, and the choices available to you.' },
+        { h:'Information we collect', p:'When you contact us through our website, we may collect the name, email address, and message details you voluntarily submit. We do not knowingly collect sensitive personal data.' },
+        { h:'How we use it', p:'Information is used to respond to your inquiry, follow up on your request, and maintain the quality of our services. We do not sell or rent personal data to third parties.' },
+        { h:'Third-party processing', p:'Contact form submissions may be processed through trusted third-party providers (such as Formspree). These providers operate under their own privacy and security standards.' },
+        { h:'Your choices', p:'You may request access to, correction of, or deletion of your personal information at any time by contacting galtrix.info@galtrix.net.' },
+      ],
+    },
+    {
+      id:'terms',
+      accent:'purple',
+      eyebrow:'Terms',
+      title:'The terms that govern your use of this website.',
+      blocks:[
+        { h:'Overview', p:'The GALTRIX website is provided for general informational and business purposes. By accessing or using this site, you agree to the terms outlined below.' },
+        { h:'Acceptable use', p:'You agree to use the site lawfully and in a manner that does not infringe on the rights of others or restrict their use of the platform.' },
+        { h:'Intellectual property', p:'All content, branding, visual identity, and materials on this website are owned or controlled by GALTRIX and protected by applicable intellectual property laws. Unauthorized copying, reproduction, misuse, or interference with the site is prohibited.' },
+        { h:'Updates', p:'Information on this website may be modified, updated, or removed at any time without prior notice.' },
+        { h:'Limitation of liability', p:'GALTRIX provides this website on an "as is" basis and is not liable for any indirect or consequential damages arising from its use.' },
+      ],
+    },
+    {
+      id:'security',
+      accent:'cyan',
+      eyebrow:'Security',
+      title:'How we protect what you share with us.',
+      blocks:[
+        { h:'Our approach', p:'GALTRIX takes the protection of submitted information seriously. We apply reasonable technical and organizational measures designed to safeguard personal data shared through our website.' },
+        { h:'Secure processing', p:'Where applicable, trusted third-party providers are used to process and transmit information through established security practices.' },
+        { h:'Limitations', p:'While we take meaningful steps to protect your data, no digital platform can guarantee complete security.' },
+        { h:'Report a concern', p:'If you believe you have identified a security issue related to the GALTRIX website, please contact us at galtrix.info@galtrix.net so we can review it promptly.' },
+      ],
+    },
+  ];
+  return (
+    <section id="legal" className="relative border-t border-white/10">
+      <div className="mx-auto w-full max-w-7xl px-6 py-28 lg:px-10">
+        <Reveal className="max-w-2xl">
+          <div className="text-[11px] uppercase tracking-[0.4em] text-cyan-300/90">Legal</div>
+          <h2 className="mt-5 font-display text-4xl font-bold leading-[1.05] tracking-[-0.035em] text-white sm:text-5xl lg:text-6xl">
+            Transparency, trust, and responsible practice.
+          </h2>
+        </Reveal>
+
+        <div className="mt-16 space-y-10">
+          {sections.map((s, idx)=>{
+            const isCyan = s.accent==='cyan';
+            return (
+              <Reveal key={s.id} delay={idx*120}>
+                <div id={s.id} className={`group relative overflow-hidden rounded-[28px] border bg-[#06081a]/70 p-8 backdrop-blur-xl transition lg:p-10 ${isCyan?'border-cyan-300/25 hover:glow-cyan':'border-purple-400/25 hover:glow-purple'}`}>
+                  <div aria-hidden className={`pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full blur-3xl ${isCyan?'bg-cyan-400/10':'bg-purple-400/10'}`}/>
+                  <div className="relative grid gap-10 lg:grid-cols-[0.8fr_1.2fr]">
+                    <div>
+                      <div className={`text-[11px] uppercase tracking-[0.4em] ${isCyan?'text-cyan-300/90':'text-purple-300/90'}`}>{s.eyebrow}</div>
+                      <h3 className="mt-4 font-display text-3xl font-bold leading-[1.1] tracking-[-0.02em] text-white sm:text-4xl">
+                        {s.title}
+                      </h3>
+                      <div className={`mt-6 h-px w-24 bg-gradient-to-r ${isCyan?'from-cyan-300/70 to-transparent':'from-purple-400/70 to-transparent'}`}/>
+                    </div>
+                    <div className="space-y-6">
+                      {s.blocks.map(b=>(
+                        <div key={b.h}>
+                          <div className={`text-[11px] uppercase tracking-[0.32em] ${isCyan?'text-cyan-200/85':'text-purple-200/85'}`}>{b.h}</div>
+                          <p className="mt-2 text-[14.5px] leading-8 text-white/75">{b.p}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </Reveal>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function Footer(){
   const cols = [
-    { h:'Company', l:['About','Founders','Principles','Brand'] },
-    { h:'Focus', l:['AI','Automation','Infrastructure','Ventures'] },
-    { h:'Contact', l:['Inquiries','Partnerships','Press','Careers'] },
+    { h:'Company', l:[{t:'About',h:'#about'},{t:'Founders',h:'#founders'},{t:'Principles',h:'#principles'},{t:'Contact',h:'#contact'}] },
+    { h:'Focus', l:[{t:'AI',h:'#focus'},{t:'Automation',h:'#focus'},{t:'Infrastructure',h:'#focus'},{t:'Ventures',h:'#focus'}] },
+    { h:'Legal', l:[{t:'Privacy',h:'#privacy'},{t:'Terms',h:'#terms'},{t:'Security',h:'#security'}] },
   ];
   return (
     <footer className="relative border-t border-white/10 bg-[#04050d]/90 backdrop-blur-2xl">
@@ -928,7 +1013,7 @@ function Footer(){
             <div className="text-[11px] uppercase tracking-[0.4em] text-white/40">{c.h}</div>
             <ul className="mt-5 space-y-3">
               {c.l.map(x=>(
-                <li key={x}><a href="#" className="text-[14px] text-white/70 transition hover:text-white">{x}</a></li>
+                <li key={x.t}><a href={x.h} className="text-[14px] text-white/70 transition hover:text-white">{x.t}</a></li>
               ))}
             </ul>
           </div>
@@ -938,9 +1023,9 @@ function Footer(){
         <div className="mx-auto flex w-full max-w-7xl flex-col items-start justify-between gap-4 px-6 py-6 text-[12px] uppercase tracking-[0.3em] text-white/45 md:flex-row md:items-center lg:px-10">
           <div>© {new Date().getFullYear()} GALTRIX — All rights reserved.</div>
           <div className="flex items-center gap-6">
-            <a href="#" className="transition hover:text-white">Privacy</a>
-            <a href="#" className="transition hover:text-white">Terms</a>
-            <a href="#" className="transition hover:text-white">Security</a>
+            <a href="#privacy" className="transition hover:text-white">Privacy</a>
+            <a href="#terms" className="transition hover:text-white">Terms</a>
+            <a href="#security" className="transition hover:text-white">Security</a>
           </div>
         </div>
       </div>
@@ -960,6 +1045,7 @@ function App(){
         <Principles/>
         <Founders/>
         <Contact/>
+        <Legal/>
       </main>
       <Footer/>
     </div>

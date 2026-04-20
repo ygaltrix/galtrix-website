@@ -1,0 +1,9 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "AzureWebJobsStorage": "",
+    "FORMSPREE_FORM_ID": "xykljbzj",
+    "FORMSPREE_PAT": "REPLACE_ME_WITH_FORMSPREE_PERSONAL_ACCESS_TOKEN"
+  }
+}

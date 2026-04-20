@@ -21,7 +21,15 @@
       "Bash(export PATH=\"$PATH:/c/Program Files/GitHub CLI\")",
       "Bash(gh auth:*)",
       "Bash(gh repo:*)",
-      "Bash(gh api:*)"
+      "Bash(gh api:*)",
+      "Bash(az --version)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/Microsoft SDKs/Azure/CLI2/wbin\")",
+      "Bash(az account:*)",
+      "Bash(az login:*)",
+      "Bash(az provider:*)",
+      "Bash(az group:*)",
+      "Bash(gh run:*)",
+      "WebFetch(domain:help.formspree.io)"
     ]
   }
 }

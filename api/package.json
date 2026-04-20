@@ -1,0 +1,8 @@
+{
+  "name": "galtrix-api",
+  "version": "1.0.0",
+  "description": "Serverless proxies for the Galtrix admin dashboard",
+  "main": "index.js",
+  "engines": { "node": ">=20" },
+  "dependencies": {}
+}

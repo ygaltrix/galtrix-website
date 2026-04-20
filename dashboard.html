@@ -789,7 +789,18 @@ function IntegrationPill({ label, state = "mock", hint }){
 }
 
 /* ================= Header ================= */
-function Header({ query, setQuery, onRefresh, refreshing, liveLabel }){
+function Header({ query, setQuery, onRefresh, refreshing, liveLabel, lastSyncedAt }){
+  const [relLabel, setRelLabel] = useState("");
+  useEffect(() => {
+    if (!lastSyncedAt) { setRelLabel(""); return; }
+    const fmt = () => {
+      const s = Math.floor((Date.now() - lastSyncedAt.getTime()) / 1000);
+      setRelLabel(s < 5 ? "just now" : s < 60 ? `${s}s ago` : `${Math.floor(s/60)}m ago`);
+    };
+    fmt();
+    const t = setInterval(fmt, 5000);
+    return () => clearInterval(t);
+  }, [lastSyncedAt]);
   return (
     <header className="flex items-center gap-4 h-[72px] px-7 border-b border-white/[0.06] relative z-10">
       <div className="flex items-center gap-3">
@@ -806,12 +817,25 @@ function Header({ query, setQuery, onRefresh, refreshing, liveLabel }){
       <button className="btn" onClick={onRefresh} disabled={refreshing}>
         <Ico.refresh/> {refreshing?"Syncing…":"Sync"}
       </button>
+      {relLabel && <span className="text-[11px] text-slate-500 font-mono">synced {relLabel}</span>}
       <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-slate-400 live">{liveLabel}</div>
       <button className="relative btn" aria-label="Notifications">
         <Ico.bell/>
         <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-cyan-400" style={{boxShadow:"0 0 10px #22d3ee"}}/>
       </button>
     </header>
+  );
+}
+
+function Toast({ toast }){
+  if (!toast) return null;
+  return (
+    <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 fade-in">
+      <div className="glass-strong rounded-xl px-5 py-3 flex items-center gap-3 hairline-strong glow-cyan">
+        <span className="w-2 h-2 rounded-full bg-cyan-400" style={{boxShadow:"0 0 12px #22d3ee"}}/>
+        <span className="font-display text-[13.5px] font-semibold tracking-tight">{toast.text}</span>
+      </div>
+    </div>
   );
 }
 
@@ -1192,6 +1216,9 @@ function App(){
   const [sources, setSources] = useState({ formspree: "mock", gmail: "mock" });
   const [gmailConnected, setGmailConnected] = useState(false);
   const [gmailLoading, setGmailLoading] = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState(null);
+  const [toast, setToast] = useState(null);       // { text, accent } | null
+  const prevLeadIdsRef = useRef(new Set());
 
   const matchGmailToLeads = (notes, leads) => {
     return notes.map(n => {
@@ -1222,6 +1249,23 @@ function App(){
       if (fs) { baseLeads = fs; leadsSource = "formspree"; }
     }
     if (!baseLeads) baseLeads = buildMockLeads();
+
+    // Detect new leads vs previous sync — only for live (non-mock) sources
+    if (leadsSource !== "mock") {
+      const prev = prevLeadIdsRef.current;
+      const current = new Set(baseLeads.map(l => l.id));
+      const newlyArrived = baseLeads.filter(l => !prev.has(l.id));
+      if (prev.size > 0 && newlyArrived.length > 0) {
+        const first = newlyArrived[0];
+        const label = newlyArrived.length === 1
+          ? `New lead from ${first.name}`
+          : `${newlyArrived.length} new leads arrived`;
+        setToast({ text: label, accent: "cyan" });
+        setTimeout(() => setToast(null), 4500);
+        console.log("[Auto-sync] new leads:", newlyArrived.map(l => ({ name: l.name, email: l.email })));
+      }
+      prevLeadIdsRef.current = current;
+    }
     setLeads(baseLeads);
 
     // Gmail notifications panel (always the raw Formspree emails if connected)
@@ -1231,6 +1275,7 @@ function App(){
 
     setSources({ formspree: leadsSource, gmail: gm ? "live" : "mock" });
     setGmailConnected(!!Gmail.accessToken);
+    setLastSyncedAt(new Date());
     setRefreshing(false);
   }, []);
 
@@ -1272,6 +1317,35 @@ function App(){
   },[leads]);
 
   useEffect(()=>{ loadAll(); },[loadAll]);
+
+  // Auto-poll Gmail every 45s while connected so new Formspree submissions
+  // appear without the user clicking Sync. Pauses when the tab is hidden
+  // to avoid burning API quota, resumes on focus.
+  useEffect(() => {
+    if (!gmailConnected) return;
+    const POLL_MS = 45_000;
+    let timer = null;
+
+    const tick = () => {
+      if (document.visibilityState === "visible") {
+        console.log("[Auto-sync] polling Gmail…");
+        loadAll();
+      }
+    };
+
+    timer = setInterval(tick, POLL_MS);
+
+    // Run immediately when the tab becomes visible again (e.g. user switched back)
+    const onVis = () => {
+      if (document.visibilityState === "visible") tick();
+    };
+    document.addEventListener("visibilitychange", onVis);
+
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [gmailConnected, loadAll]);
 
   // ⌘K focuses search
   useEffect(()=>{
@@ -1338,7 +1412,7 @@ function App(){
       <Sidebar view={view} setView={setView} counts={counts} sources={sources}/>
 
       <div className="flex-1 flex flex-col min-w-0">
-        <Header query={query} setQuery={setQuery} onRefresh={loadAll} refreshing={refreshing} liveLabel={liveLabel}/>
+        <Header query={query} setQuery={setQuery} onRefresh={loadAll} refreshing={refreshing} liveLabel={liveLabel} lastSyncedAt={lastSyncedAt}/>
 
         <main className="flex-1 min-h-0 flex overflow-hidden">
           <div className="flex-1 min-w-0 p-6 flex flex-col gap-5 overflow-hidden">
@@ -1373,6 +1447,7 @@ function App(){
       </div>
 
       {selected && <LeadPanel lead={selected} onClose={()=>setSelectedId(null)} onAction={onAction}/>}
+      <Toast toast={toast}/>
     </div>
   );
 }

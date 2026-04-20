@@ -1,0 +1,274 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 560" width="900" height="560">
+  <!-- GALTRIX — "loading the G" tracer with CYAN + PURPLE glow, 10s loop -->
+
+  <defs>
+    <!-- Cyan glow filter (subtle) -->
+    <filter id="cyan-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="1.5" result="b1"/>
+      <feGaussianBlur stdDeviation="4" in="SourceGraphic" result="b2"/>
+      <feMerge><feMergeNode in="b2"/><feMergeNode in="b1"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <!-- Purple glow filter (subtle) -->
+    <filter id="purple-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2" result="b1"/>
+      <feGaussianBlur stdDeviation="5" in="SourceGraphic" result="b2"/>
+      <feMerge><feMergeNode in="b2"/><feMergeNode in="b1"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <!-- Gold glow filter (kept for the exit dot) -->
+    <filter id="gold-glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="5" result="b1"/>
+      <feGaussianBlur stdDeviation="12" in="SourceGraphic" result="b2"/>
+      <feMerge><feMergeNode in="b2"/><feMergeNode in="b1"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+
+    <!-- Background gradient with subtle purple in corners -->
+    <linearGradient id="bg-grad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0A0820"/>
+      <stop offset="0.5" stop-color="#030A18"/>
+      <stop offset="1" stop-color="#100628"/>
+    </linearGradient>
+
+    <!-- Purple corner glow (upper-left) -->
+    <radialGradient id="purple-haze-1" cx="0" cy="0" r="0.8">
+      <stop offset="0" stop-color="#8B5CF6" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#8B5CF6" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Cyan corner glow (lower-right) -->
+    <radialGradient id="cyan-haze" cx="1" cy="1" r="0.8">
+      <stop offset="0" stop-color="#4FC3F7" stop-opacity="0.15"/>
+      <stop offset="1" stop-color="#4FC3F7" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="vignette" cx="0.5" cy="0.5" r="0.7">
+      <stop offset="0.4" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.7"/>
+    </radialGradient>
+
+    <pattern id="tron-grid" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#0D2845" stroke-width="0.5"/>
+    </pattern>
+
+    <!-- ====== The key: cyan → purple gradient along the G path ====== -->
+    <linearGradient id="trace-grad" x1="390" y1="130" x2="490" y2="270" gradientUnits="userSpaceOnUse">
+      <stop offset="0"    stop-color="#4FC3F7"/>
+      <stop offset="0.5"  stop-color="#7FA8F2"/>
+      <stop offset="1"    stop-color="#A78BFA"/>
+    </linearGradient>
+    <linearGradient id="trace-grad-bright" x1="390" y1="130" x2="490" y2="270" gradientUnits="userSpaceOnUse">
+      <stop offset="0"    stop-color="#E8FBFF"/>
+      <stop offset="1"    stop-color="#E0D0FF"/>
+    </linearGradient>
+
+    <path id="g-path"
+          d="M 490 130 L 390 130 L 390 270 L 490 270 L 490 220 L 430 220 L 430 200 L 470 200 L 470 170 L 420 170 L 420 240 L 460 240"
+          pathLength="1000"/>
+  </defs>
+
+  <!-- Background layers -->
+  <rect width="900" height="560" fill="url(#bg-grad)"/>
+  <rect width="900" height="560" fill="url(#tron-grid)" opacity="0.5"/>
+  <rect width="900" height="560" fill="url(#purple-haze-1)"/>
+  <rect width="900" height="560" fill="url(#cyan-haze)"/>
+  <rect width="900" height="560" fill="url(#vignette)"/>
+
+  <!-- Frame + brackets -->
+  <rect x="370" y="110" width="140" height="180" fill="none" stroke="#3A3A6E" stroke-width="1"/>
+  <g stroke="#C9A961" stroke-width="2.5" fill="none">
+    <path d="M 370 126 L 370 110 L 386 110"/>
+    <path d="M 494 110 L 510 110 L 510 126"/>
+    <path d="M 370 274 L 370 290 L 386 290"/>
+    <path d="M 494 290 L 510 290 L 510 274"/>
+  </g>
+
+  <!-- Dim base G track -->
+  <use href="#g-path" fill="none" stroke="#1F2A50" stroke-width="7"
+       stroke-linecap="butt" stroke-linejoin="miter"/>
+
+  <!-- ============ PURPLE OUTER GLOW HALO (behind everything, dialed down) ============ -->
+  <use href="#g-path" fill="none" stroke="#A78BFA" stroke-width="8"
+       stroke-linecap="butt" stroke-linejoin="miter"
+       stroke-dasharray="1000" stroke-dashoffset="1000"
+       filter="url(#purple-glow)" opacity="0.35">
+    <animate attributeName="stroke-dashoffset"
+             values="1000;1000;0;0;0;1000"
+             keyTimes="0;0.05;0.70;0.93;0.97;1"
+             calcMode="spline"
+             keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0 0 1 1;0.4 0 0.2 1"
+             dur="10s" repeatCount="indefinite"/>
+  </use>
+
+  <!-- ============ CYAN→PURPLE GRADIENT TRAIL (main trace) ============ -->
+  <use href="#g-path" fill="none" stroke="url(#trace-grad)" stroke-width="7"
+       stroke-linecap="butt" stroke-linejoin="miter"
+       stroke-dasharray="1000" stroke-dashoffset="1000"
+       filter="url(#cyan-glow)">
+    <animate attributeName="stroke-dashoffset"
+             values="1000;1000;0;0;0;1000"
+             keyTimes="0;0.05;0.70;0.93;0.97;1"
+             calcMode="spline"
+             keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0 0 1 1;0.4 0 0.2 1"
+             dur="10s" repeatCount="indefinite"/>
+  </use>
+
+  <!-- White hot core — 60-unit leading segment riding with the cursor -->
+  <use href="#g-path" fill="none" stroke="url(#trace-grad-bright)" stroke-width="3"
+       stroke-linecap="butt" stroke-linejoin="miter"
+       stroke-dasharray="60 1000" stroke-dashoffset="1060">
+    <animate attributeName="stroke-dashoffset"
+             values="1060;1060;0;0"
+             keyTimes="0;0.05;0.70;1"
+             calcMode="spline"
+             keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"
+             dur="10s" repeatCount="indefinite"/>
+  </use>
+
+  <!-- Light-cycle cursor — purple outer halo + cyan inner halo + white core -->
+  <!-- Purple outer halo -->
+  <circle r="12" fill="#A78BFA" opacity="0" filter="url(#purple-glow)">
+    <animate attributeName="opacity"
+             values="0;0;0.6;0.6;0;0"
+             keyTimes="0;0.05;0.08;0.69;0.72;1"
+             calcMode="spline"
+             keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1"
+             dur="10s" repeatCount="indefinite"/>
+    <animateMotion dur="10s" repeatCount="indefinite"
+                   keyPoints="0;0;1;1"
+                   keyTimes="0;0.05;0.70;1"
+                   calcMode="spline"
+                   keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1">
+      <mpath href="#g-path"/>
+    </animateMotion>
+  </circle>
+  <!-- Cyan mid halo -->
+  <circle r="7" fill="#FFFFFF" opacity="0" filter="url(#cyan-glow)">
+    <animate attributeName="opacity"
+             values="0;0;1;1;0;0"
+             keyTimes="0;0.05;0.08;0.69;0.72;1"
+             calcMode="spline"
+             keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1"
+             dur="10s" repeatCount="indefinite"/>
+    <animateMotion dur="10s" repeatCount="indefinite"
+                   keyPoints="0;0;1;1"
+                   keyTimes="0;0.05;0.70;1"
+                   calcMode="spline"
+                   keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1">
+      <mpath href="#g-path"/>
+    </animateMotion>
+  </circle>
+  <!-- White hot core -->
+  <circle r="2.5" fill="#FFFFFF" opacity="0">
+    <animate attributeName="opacity"
+             values="0;0;1;1;0;0"
+             keyTimes="0;0.05;0.08;0.69;0.72;1"
+             calcMode="spline"
+             keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1"
+             dur="10s" repeatCount="indefinite"/>
+    <animateMotion dur="10s" repeatCount="indefinite"
+                   keyPoints="0;0;1;1"
+                   keyTimes="0;0.05;0.70;1"
+                   calcMode="spline"
+                   keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1">
+      <mpath href="#g-path"/>
+    </animateMotion>
+  </circle>
+
+  <!-- ============ Gold arrival pulse + shockwave ============ -->
+  <g transform="translate(460 240)">
+    <!-- Purple shockwave (outer) -->
+    <circle r="6" fill="none" stroke="#A78BFA" stroke-width="1.5" opacity="0" filter="url(#purple-glow)">
+      <animate attributeName="opacity" values="0;0;0.8;0;0"
+               keyTimes="0;0.70;0.72;0.82;1"
+               calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0.4 0 0.2 1;0 0 1 1"
+               dur="10s" repeatCount="indefinite"/>
+      <animate attributeName="r" values="6;6;10;100;100"
+               keyTimes="0;0.70;0.72;0.82;1"
+               calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0.4 0 0.2 1;0 0 1 1"
+               dur="10s" repeatCount="indefinite"/>
+    </circle>
+    <!-- Cyan shockwave (inner) -->
+    <circle r="6" fill="none" stroke="#4FC3F7" stroke-width="1.5" opacity="0">
+      <animate attributeName="opacity" values="0;0;0.9;0;0"
+               keyTimes="0;0.71;0.73;0.80;1"
+               calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0.4 0 0.2 1;0 0 1 1"
+               dur="10s" repeatCount="indefinite"/>
+      <animate attributeName="r" values="6;6;10;80;80"
+               keyTimes="0;0.71;0.73;0.80;1"
+               calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0.4 0 0.2 1;0 0 1 1"
+               dur="10s" repeatCount="indefinite"/>
+    </circle>
+    <!-- Exit halo -->
+    <circle r="14" fill="none" stroke="#C9A961" stroke-width="0.5" opacity="0">
+      <animate attributeName="opacity" values="0;0;0.5;0.5;0"
+               keyTimes="0;0.70;0.75;0.95;1"
+               calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1"
+               dur="10s" repeatCount="indefinite"/>
+    </circle>
+    <!-- Core gold dot -->
+    <circle r="3" fill="#C9A961" filter="url(#gold-glow)" opacity="0">
+      <animate attributeName="opacity" values="0;0;1;1;1;0"
+               keyTimes="0;0.70;0.73;0.93;0.95;1"
+               calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0 0 1 1;0.4 0 0.2 1"
+               dur="10s" repeatCount="indefinite"/>
+      <animate attributeName="r"
+               values="3;3;10;6;5;6;5;6;3"
+               keyTimes="0;0.70;0.74;0.80;0.86;0.89;0.92;0.95;1"
+               calcMode="spline"
+               keySplines="0 0 1 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1;0.4 0 0.2 1"
+               dur="10s" repeatCount="indefinite"/>
+    </circle>
+    <circle r="2" fill="#FFF8E0" opacity="0">
+      <animate attributeName="opacity" values="0;0;1;1;0"
+               keyTimes="0;0.70;0.75;0.95;1"
+               calcMode="spline" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1"
+               dur="10s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+
+  <!-- ============ GALTRIX wordmark — cyan→purple gradient fill ============ -->
+  <defs>
+    <linearGradient id="wordmark-grad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0"   stop-color="#E8FBFF"/>
+      <stop offset="0.5" stop-color="#FFFFFF"/>
+      <stop offset="1"   stop-color="#E0D0FF"/>
+    </linearGradient>
+  </defs>
+  <text x="450" y="390" text-anchor="middle"
+        font-family="'Helvetica Neue','Inter',sans-serif" font-size="64" font-weight="700"
+        letter-spacing="0" fill="url(#wordmark-grad)" opacity="0">GALTRIX<animate attributeName="opacity"
+             values="0;0;1;1;0"
+             keyTimes="0;0.74;0.82;0.95;1"
+             calcMode="spline"
+             keySplines="0 0 1 1;0.25 0.1 0.25 1;0 0 1 1;0.4 0 0.2 1"
+             dur="10s" repeatCount="indefinite"/></text>
+
+  <!-- Tagline — purple now -->
+  <text x="450" y="422" text-anchor="middle"
+        font-family="'Helvetica Neue','Inter',sans-serif" font-size="13" font-weight="400"
+        font-style="italic" letter-spacing="6" fill="#A78BFA" opacity="0">
+    Built For What's Next
+    <animate attributeName="opacity"
+             values="0;0;0.95;0.95;0"
+             keyTimes="0;0.80;0.86;0.95;1"
+             calcMode="spline"
+             keySplines="0 0 1 1;0.25 0.1 0.25 1;0 0 1 1;0.4 0 0.2 1"
+             dur="10s" repeatCount="indefinite"/>
+  </text>
+
+  <!-- Gold accent rule under tagline -->
+  <line x1="420" y1="438" x2="480" y2="438" stroke="#C9A961" stroke-width="0.5" opacity="0">
+    <animate attributeName="opacity" values="0;0;0.6;0.6;0"
+             keyTimes="0;0.82;0.88;0.95;1"
+             calcMode="spline" keySplines="0 0 1 1;0.25 0.1 0.25 1;0 0 1 1;0.4 0 0.2 1"
+             dur="10s" repeatCount="indefinite"/>
+  </line>
+
+  <!-- Crossfade overlay for seamless loop -->
+  <rect width="900" height="560" fill="#030A18" opacity="0">
+    <animate attributeName="opacity"
+             values="0;0;0.9;1;1"
+             keyTimes="0;0.93;0.98;1;1"
+             calcMode="spline"
+             keySplines="0 0 1 1;0.4 0 0.2 1;0.4 0 0.2 1;0 0 1 1"
+             dur="10s" repeatCount="indefinite"/>
+  </rect>
+</svg>

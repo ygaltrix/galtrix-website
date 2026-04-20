@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="360 100 160 200" width="160" height="200">
+  <!-- Cropped Galtrix G-mark for header/footer (no wordmark baked in) -->
+  <defs>
+    <filter id="cyan-glow-m" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="1.5" result="b1"/>
+      <feGaussianBlur stdDeviation="4" in="SourceGraphic" result="b2"/>
+      <feMerge><feMergeNode in="b2"/><feMergeNode in="b1"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="purple-glow-m" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2" result="b1"/>
+      <feGaussianBlur stdDeviation="5" in="SourceGraphic" result="b2"/>
+      <feMerge><feMergeNode in="b2"/><feMergeNode in="b1"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="trace-grad-m" x1="390" y1="130" x2="490" y2="270" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4FC3F7"/>
+      <stop offset="0.5" stop-color="#7FA8F2"/>
+      <stop offset="1" stop-color="#A78BFA"/>
+    </linearGradient>
+    <linearGradient id="trace-bright-m" x1="390" y1="130" x2="490" y2="270" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#E8FBFF"/>
+      <stop offset="1" stop-color="#E0D0FF"/>
+    </linearGradient>
+    <path id="g-path-m"
+          d="M 490 130 L 390 130 L 390 270 L 490 270 L 490 220 L 430 220 L 430 200 L 470 200 L 470 170 L 420 170 L 420 240 L 460 240"
+          pathLength="1000"/>
+  </defs>
+
+  <!-- Gold corner brackets -->
+  <g stroke="#C9A961" stroke-width="2" fill="none">
+    <path d="M 370 126 L 370 110 L 386 110"/>
+    <path d="M 494 110 L 510 110 L 510 126"/>
+    <path d="M 370 274 L 370 290 L 386 290"/>
+    <path d="M 494 290 L 510 290 L 510 274"/>
+  </g>
+
+  <!-- Dim base track -->
+  <use href="#g-path-m" fill="none" stroke="#1F2A50" stroke-width="7"/>
+
+  <!-- Purple halo -->
+  <use href="#g-path-m" fill="none" stroke="#A78BFA" stroke-width="8"
+       stroke-dasharray="1000" stroke-dashoffset="1000"
+       filter="url(#purple-glow-m)" opacity="0.35">
+    <animate attributeName="stroke-dashoffset"
+             values="1000;1000;0;0;0;1000"
+             keyTimes="0;0.05;0.70;0.93;0.97;1"
+             dur="6s" repeatCount="indefinite"/>
+  </use>
+
+  <!-- Cyan→purple trace -->
+  <use href="#g-path-m" fill="none" stroke="url(#trace-grad-m)" stroke-width="7"
+       stroke-dasharray="1000" stroke-dashoffset="1000"
+       filter="url(#cyan-glow-m)">
+    <animate attributeName="stroke-dashoffset"
+             values="1000;1000;0;0;0;1000"
+             keyTimes="0;0.05;0.70;0.93;0.97;1"
+             dur="6s" repeatCount="indefinite"/>
+  </use>
+
+  <!-- White hot leading segment -->
+  <use href="#g-path-m" fill="none" stroke="url(#trace-bright-m)" stroke-width="3"
+       stroke-dasharray="60 1000" stroke-dashoffset="1060">
+    <animate attributeName="stroke-dashoffset"
+             values="1060;1060;0;0"
+             keyTimes="0;0.05;0.70;1"
+             dur="6s" repeatCount="indefinite"/>
+  </use>
+
+  <!-- Cursor glow -->
+  <circle r="6" fill="#FFFFFF" opacity="0" filter="url(#cyan-glow-m)">
+    <animate attributeName="opacity" values="0;0;1;1;0;0"
+             keyTimes="0;0.05;0.08;0.69;0.72;1" dur="6s" repeatCount="indefinite"/>
+    <animateMotion dur="6s" repeatCount="indefinite"
+                   keyPoints="0;0;1;1" keyTimes="0;0.05;0.70;1">
+      <mpath href="#g-path-m"/>
+    </animateMotion>
+  </circle>
+  <circle r="2" fill="#FFFFFF" opacity="0">
+    <animate attributeName="opacity" values="0;0;1;1;0;0"
+             keyTimes="0;0.05;0.08;0.69;0.72;1" dur="6s" repeatCount="indefinite"/>
+    <animateMotion dur="6s" repeatCount="indefinite"
+                   keyPoints="0;0;1;1" keyTimes="0;0.05;0.70;1">
+      <mpath href="#g-path-m"/>
+    </animateMotion>
+  </circle>
+</svg>

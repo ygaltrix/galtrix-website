@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GALTRIX — Built for What's Next</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%2322d3ee'/><stop offset='1' stop-color='%23a855f7'/></linearGradient></defs><polygon points='32,4 58,18 58,46 32,60 6,46 6,18' fill='none' stroke='url(%23g)' stroke-width='3'/><path d='M20 22 L32 42 L44 22 M26 34 L38 34' stroke='url(%23g)' stroke-width='4' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<style>
+  :root{
+    --bg:#04050d;
+    --cyan:#22d3ee;
+    --cyan-soft:rgba(34,211,238,0.5);
+    --purple:#a855f7;
+    --purple-soft:rgba(168,85,247,0.5);
+  }
+  html,body{background:var(--bg); font-family:'Inter',system-ui,sans-serif; -webkit-font-smoothing:antialiased;}
+  *{box-sizing:border-box}
+  .font-display{font-family:'Space Grotesk','Inter',sans-serif; letter-spacing:-0.02em;}
+
+  /* ---------- Ambient background: deep, moody, cyan + purple glow ---------- */
+  .bg-stage{position:fixed; inset:0; z-index:0; overflow:hidden; pointer-events:none;
+    background:
+      radial-gradient(900px 700px at 15% 10%, rgba(12,26,54,0.8) 0%, transparent 60%),
+      radial-gradient(1100px 900px at 85% 30%, rgba(30,10,52,0.8) 0%, transparent 60%),
+      radial-gradient(ellipse at 50% 120%, #05071a 0%, #02030a 60%);}
+  /* subtle mesh grid, masked so it fades at edges */
+  .bg-stage .grid{
+    position:absolute; inset:0;
+    background-image:
+      linear-gradient(to right, rgba(125,211,252,0.035) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(168,140,255,0.035) 1px, transparent 1px);
+    background-size:64px 64px;
+    -webkit-mask-image:radial-gradient(ellipse 75% 60% at 50% 35%, #000 25%, transparent 85%);
+            mask-image:radial-gradient(ellipse 75% 60% at 50% 35%, #000 25%, transparent 85%);}
+
+  /* Aurora glows */
+  .bg-stage .glow{position:absolute; border-radius:50%; filter:blur(110px); mix-blend-mode:screen; will-change:transform;}
+  .bg-stage .glow.cyan{width:70vmax; height:70vmax; top:-20%; left:-20%;
+    background:radial-gradient(circle, rgba(34,211,238,0.75), rgba(34,211,238,0) 60%);
+    animation:float1 34s ease-in-out infinite;}
+  .bg-stage .glow.purple{width:70vmax; height:70vmax; top:10%; right:-25%;
+    background:radial-gradient(circle, rgba(168,85,247,0.75), rgba(168,85,247,0) 60%);
+    animation:float2 42s ease-in-out infinite;}
+  .bg-stage .glow.cyan2{width:55vmax; height:55vmax; bottom:-25%; left:20%;
+    background:radial-gradient(circle, rgba(56,189,248,0.45), rgba(56,189,248,0) 60%);
+    animation:float3 50s ease-in-out infinite;}
+  .bg-stage .glow.purple2{width:45vmax; height:45vmax; top:40%; left:40%;
+    background:radial-gradient(circle, rgba(217,70,239,0.35), rgba(217,70,239,0) 60%);
+    animation:float4 46s ease-in-out infinite;}
+
+  /* Soft aurora ribbon sweeping horizontally */
+  .bg-stage .ribbon{position:absolute; left:-30%; right:-30%; height:45vh; top:35%; filter:blur(60px); opacity:0.55; mix-blend-mode:screen;
+    background:linear-gradient(110deg, transparent 0%, rgba(34,211,238,0.35) 25%, rgba(168,85,247,0.45) 55%, transparent 80%);
+    animation:ribbon 24s ease-in-out infinite;}
+
+  /* Cursor spotlight */
+  .bg-stage .spot{position:absolute; inset:0;
+    background:radial-gradient(520px circle at var(--mx,50%) var(--my,30%), rgba(34,211,238,0.16), transparent 55%),
+               radial-gradient(360px circle at var(--mx,50%) var(--my,30%), rgba(168,85,247,0.10), transparent 55%);}
+
+  /* Starfield */
+  .bg-stage .stars, .bg-stage .stars2{position:absolute; inset:-50px;}
+  .bg-stage .stars::before, .bg-stage .stars2::before{
+    content:""; position:absolute; inset:0;
+    background-image:
+      radial-gradient(1px 1px at 12% 18%, rgba(255,255,255,0.9), transparent 60%),
+      radial-gradient(1.2px 1.2px at 28% 74%, rgba(125,211,252,0.85), transparent 60%),
+      radial-gradient(1px 1px at 46% 32%, rgba(255,255,255,0.8), transparent 60%),
+      radial-gradient(1.4px 1.4px at 63% 58%, rgba(168,140,255,0.9), transparent 60%),
+      radial-gradient(1px 1px at 81% 22%, rgba(255,255,255,0.8), transparent 60%),
+      radial-gradient(1px 1px at 95% 71%, rgba(255,255,255,0.85), transparent 60%),
+      radial-gradient(1px 1px at 8% 55%, rgba(255,255,255,0.75), transparent 60%),
+      radial-gradient(1px 1px at 34% 10%, rgba(255,255,255,0.8), transparent 60%),
+      radial-gradient(1.2px 1.2px at 55% 88%, rgba(125,211,252,0.7), transparent 60%),
+      radial-gradient(1px 1px at 72% 12%, rgba(168,140,255,0.8), transparent 60%),
+      radial-gradient(1px 1px at 19% 38%, rgba(255,255,255,0.6), transparent 60%),
+      radial-gradient(1px 1px at 89% 45%, rgba(255,255,255,0.7), transparent 60%);
+    background-size:420px 420px; background-repeat:repeat;
+    animation:twinkle 4s ease-in-out infinite;
+  }
+  .bg-stage .stars2::before{ background-size:620px 620px; opacity:0.7; animation-duration:6s; animation-delay:-2s; }
+  .bg-stage .stars { animation:drift-s 240s linear infinite; }
+  .bg-stage .stars2{ animation:drift-s 360s linear infinite reverse; }
+
+  /* Shooting stars (occasional diagonal streaks) */
+  .bg-stage .shooting{position:absolute; inset:0; overflow:hidden;}
+  .bg-stage .shooting span{position:absolute; top:-10%; width:2px; height:140px; background:linear-gradient(180deg, transparent, #a5f3fc, transparent); filter:blur(0.5px); opacity:0;
+    animation:shoot 9s linear infinite;}
+  .bg-stage .shooting span:nth-child(1){ left:18%; animation-delay:-3s; }
+  .bg-stage .shooting span:nth-child(2){ left:62%; animation-delay:-6s; background:linear-gradient(180deg, transparent, #e9d5ff, transparent); }
+  .bg-stage .shooting span:nth-child(3){ left:88%; animation-delay:-1.5s; }
+
+  .bg-stage .grain{position:absolute; inset:0; opacity:0.14; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");}
+  .bg-stage .readable{position:absolute; inset:0;
+    background:linear-gradient(180deg, rgba(2,3,10,0.4) 0%, transparent 25%, transparent 75%, rgba(2,3,10,0.6) 100%);}
+  .bg-stage .vignette{position:absolute; inset:0;
+    background:radial-gradient(ellipse at center, transparent 45%, rgba(2,3,10,0.85) 100%);}
+
+  @keyframes float1{0%,100%{transform:translate3d(0,0,0) scale(1);}50%{transform:translate3d(10%,8%,0) scale(1.12);}}
+  @keyframes float2{0%,100%{transform:translate3d(0,0,0) scale(1);}50%{transform:translate3d(-12%,5%,0) scale(1.1);}}
+  @keyframes float3{0%,100%{transform:translate3d(0,0,0) scale(1);}50%{transform:translate3d(8%,-10%,0) scale(1.15);}}
+  @keyframes float4{0%,100%{transform:translate3d(0,0,0) scale(1);}50%{transform:translate3d(-8%,-6%,0) scale(1.18);}}
+  @keyframes ribbon{0%,100%{transform:translateX(-4%) skewY(-2deg);}50%{transform:translateX(4%) skewY(2deg);}}
+  @keyframes twinkle{0%,100%{opacity:0.85;}50%{opacity:0.55;}}
+  @keyframes drift-s{from{transform:translate3d(0,0,0);}to{transform:translate3d(-420px,-420px,0);}}
+  @keyframes shoot{
+    0%{transform:translate(0,0) rotate(18deg); opacity:0;}
+    6%{opacity:0.9;}
+    14%{opacity:0;}
+    100%{transform:translate(-40vw,120vh) rotate(18deg); opacity:0;}
+  }
+
+  #root{position:relative; z-index:10;}
+
+  /* Neon glows */
+  .glow-cyan{box-shadow:0 0 40px rgba(34,211,238,0.35), 0 0 80px rgba(34,211,238,0.15);}
+  .glow-purple{box-shadow:0 0 40px rgba(168,85,247,0.35), 0 0 80px rgba(168,85,247,0.15);}
+  .text-glow-cyan{text-shadow:0 0 22px rgba(34,211,238,0.55);}
+  .text-glow-purple{text-shadow:0 0 22px rgba(168,85,247,0.55);}
+
+  .divider-glow{height:1px; background:linear-gradient(90deg, transparent, rgba(34,211,238,0.6) 40%, rgba(168,85,247,0.6) 60%, transparent);
+    box-shadow:0 0 22px rgba(34,211,238,0.25), 0 0 22px rgba(168,85,247,0.25);}
+
+  /* ---------- Galtrix logo mark ---------- */
+  .gx-mark{position:relative; display:inline-grid; place-items:center;}
+  .gx-mark svg{overflow:visible;}
+  .gx-mark .hex{animation:gx-spin 24s linear infinite; transform-origin:center; transform-box:fill-box;}
+  .gx-mark .hex-inner{animation:gx-spin 36s linear infinite reverse; transform-origin:center; transform-box:fill-box;}
+  .gx-mark .letter{stroke-dasharray:200; stroke-dashoffset:200; animation:gx-draw 1.8s ease-out forwards;}
+  .gx-mark .dot{animation:gx-pulse 2.4s ease-in-out infinite; transform-origin:center; transform-box:fill-box;}
+  .gx-mark::after{content:""; position:absolute; inset:-6px; border-radius:16px; background:radial-gradient(circle, rgba(34,211,238,0.35), rgba(168,85,247,0.2) 50%, transparent 70%); filter:blur(12px); z-index:-1; animation:gx-glow 3.6s ease-in-out infinite;}
+  @keyframes gx-spin{to{transform:rotate(360deg);}}
+  @keyframes gx-draw{to{stroke-dashoffset:0;}}
+  @keyframes gx-pulse{0%,100%{transform:scale(1); opacity:0.9;}50%{transform:scale(1.25); opacity:1;}}
+  @keyframes gx-glow{0%,100%{opacity:0.55;}50%{opacity:1;}}
+
+  /* ---------- Neon AI-workflow node graph (reference-image style) ---------- */
+  .bg-stage .graph{
+    position:absolute; inset:-6%;
+    transform:perspective(1400px) rotateX(52deg) rotateZ(-14deg) translateY(6%);
+    transform-origin:center center;
+    filter:drop-shadow(0 0 16px rgba(34,211,238,0.25));
+    opacity:0.95;
+  }
+  .bg-stage .graph svg{width:100%; height:100%; display:block;}
+  .bg-stage .graph .card-fill{fill:#060a18;}
+  .bg-stage .graph .edge{fill:none; stroke-linecap:round; stroke-linejoin:round; stroke-width:1.8; stroke-dasharray:6 8;
+    filter:drop-shadow(0 0 6px currentColor);
+    animation:flow 6s linear infinite;}
+  .bg-stage .graph .edge.slow{animation-duration:9s;}
+  .bg-stage .graph .edge.rev{animation-direction:reverse;}
+  .bg-stage .graph .node-border{fill:none; stroke-width:1.6; filter:drop-shadow(0 0 8px currentColor);}
+  .bg-stage .graph .node-dot{filter:drop-shadow(0 0 6px currentColor);}
+  .bg-stage .graph .glyph{stroke-width:1.6; fill:none; stroke-linecap:round; stroke-linejoin:round; filter:drop-shadow(0 0 5px currentColor);}
+  @keyframes flow{to{stroke-dashoffset:-140;}}
+
+  /* Pulsing node halos */
+  .bg-stage .graph .halo{ transform-origin:center; animation:halo 3.6s ease-in-out infinite; }
+  @keyframes halo{0%,100%{opacity:0.35;}50%{opacity:0.9;}}
+
+  @media (prefers-reduced-motion: reduce){
+    .glow,.edge,.halo,.ribbon,.stars,.stars2,.shooting span{animation:none !important;}
+  }
+</style>
+</head>
+<body class="bg-[#04050d] text-white">
+
+<!-- Background -->
+<div class="bg-stage" aria-hidden="true">
+  <div class="grid"></div>
+
+  <!-- Starfield layers -->
+  <div class="stars"></div>
+  <div class="stars2"></div>
+
+  <!-- Aurora glows -->
+  <div class="glow cyan"></div>
+  <div class="glow purple"></div>
+  <div class="glow cyan2"></div>
+  <div class="glow purple2"></div>
+  <div class="ribbon"></div>
+
+  <!-- Neon AI node graph (perspective-tilted like the reference) -->
+  <div class="graph">
+    <svg viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <filter id="g-blur" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="10"/>
+        </filter>
+        <radialGradient id="halo-cy" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.6"/>
+          <stop offset="100%" stop-color="#22d3ee" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="halo-pu" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#a855f7" stop-opacity="0.6"/>
+          <stop offset="100%" stop-color="#a855f7" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+
+      <!-- ===== edges (glowing dashed traces) ===== -->
+      <g>
+        <path class="edge" style="color:#22d3ee; stroke:#22d3ee;" d="M220 480 C 360 480, 420 300, 560 300"/>
+        <path class="edge slow" style="color:#22d3ee; stroke:#22d3ee;" d="M560 300 C 700 300, 740 220, 880 220"/>
+        <path class="edge" style="color:#a855f7; stroke:#a855f7;" d="M880 220 C 1020 220, 1080 380, 1220 380"/>
+        <path class="edge slow rev" style="color:#22d3ee; stroke:#22d3ee;" d="M560 300 C 640 300, 680 500, 820 500"/>
+        <path class="edge" style="color:#22d3ee; stroke:#22d3ee;" d="M820 500 C 940 500, 980 620, 1120 620"/>
+        <path class="edge rev" style="color:#a855f7; stroke:#a855f7;" d="M1120 620 C 1260 620, 1320 520, 1440 520"/>
+        <path class="edge slow" style="color:#22d3ee; stroke:#22d3ee;" d="M220 480 C 340 480, 380 680, 520 680"/>
+        <path class="edge" style="color:#22d3ee; stroke:#22d3ee;" d="M520 680 C 660 680, 700 820, 840 820"/>
+        <path class="edge slow" style="color:#a855f7; stroke:#a855f7;" d="M840 820 C 980 820, 1020 720, 1160 720"/>
+        <path class="edge rev" style="color:#22d3ee; stroke:#22d3ee;" d="M1160 720 C 1280 720, 1320 640, 1440 640"/>
+      </g>
+
+      <!-- ===== nodes ===== -->
+
+      <!-- Trigger (cyan pill) -->
+      <g>
+        <rect class="card-fill" x="120" y="430" width="220" height="100" rx="22"/>
+        <rect class="node-border" style="color:#22d3ee; stroke:#22d3ee;" x="120" y="430" width="220" height="100" rx="22"/>
+        <g class="glyph" style="color:#22d3ee; stroke:#22d3ee;" transform="translate(150,460)">
+          <polygon points="0,0 34,20 0,40" fill="#22d3ee" stroke="none"/>
+        </g>
+        <g fill="#cbd5e1" font-family="Space Grotesk, Inter, sans-serif" font-size="18" font-weight="600">
+          <text x="200" y="476">Trigger</text>
+          <text x="200" y="500" font-size="13" font-weight="400" fill="#94a3b8">New Data Event</text>
+        </g>
+      </g>
+
+      <!-- Router (magenta/pink code node) -->
+      <g>
+        <rect class="card-fill" x="460" y="250" width="220" height="100" rx="22"/>
+        <rect class="node-border" style="color:#a855f7; stroke:#a855f7;" x="460" y="250" width="220" height="100" rx="22"/>
+        <g class="glyph" style="color:#f472b6; stroke:#f472b6;" transform="translate(490,280)">
+          <path d="M4 10 l-8 10 8 10"/><path d="M30 10 l8 10 -8 10"/>
+          <line x1="14" y1="30" x2="22" y2="10"/>
+        </g>
+        <g fill="#cbd5e1" font-family="Space Grotesk, Inter, sans-serif" font-size="18" font-weight="600">
+          <text x="540" y="296">Router</text>
+          <text x="540" y="320" font-size="13" font-weight="400" fill="#94a3b8">Conditional Logic</text>
+        </g>
+      </g>
+
+      <!-- AI Agent (hero node, cyan) -->
+      <g>
+        <ellipse cx="1030" cy="220" rx="250" ry="60" fill="url(#halo-cy)" class="halo" filter="url(#g-blur)"/>
+        <rect class="card-fill" x="820" y="160" width="420" height="120" rx="60"/>
+        <rect class="node-border" style="color:#22d3ee; stroke:#22d3ee;" x="820" y="160" width="420" height="120" rx="60" stroke-width="2.2"/>
+        <!-- Bot head glyph -->
+        <g transform="translate(862,192)" class="glyph" style="color:#67e8f9; stroke:#67e8f9;">
+          <rect x="0" y="14" width="56" height="44" rx="14" fill="#041022"/>
+          <circle cx="17" cy="36" r="4" fill="#67e8f9" stroke="none"/>
+          <circle cx="39" cy="36" r="4" fill="#67e8f9" stroke="none"/>
+          <line x1="28" y1="0" x2="28" y2="14"/>
+          <circle cx="28" cy="-2" r="3" fill="#67e8f9" stroke="none"/>
+          <line x1="-4" y1="36" x2="0" y2="36"/>
+          <line x1="56" y1="36" x2="60" y2="36"/>
+        </g>
+        <text x="940" y="230" fill="#e0f2fe" font-family="Space Grotesk, Inter, sans-serif" font-size="30" font-weight="700" letter-spacing="0.5">AI Agent</text>
+        <text x="940" y="258" fill="#7dd3fc" font-family="Inter, sans-serif" font-size="14" font-weight="500" letter-spacing="2">GALTRIX · INTELLIGENCE</text>
+      </g>
+
+      <!-- Dataset (cyan round node) -->
+      <g>
+        <circle class="card-fill" cx="290" cy="770" r="64"/>
+        <circle class="node-border" style="color:#22d3ee; stroke:#22d3ee;" cx="290" cy="770" r="64" stroke-width="2"/>
+        <circle cx="290" cy="770" r="84" fill="url(#halo-cy)" class="halo" opacity="0.5"/>
+        <g transform="translate(262,742)" class="glyph" style="color:#22d3ee; stroke:#22d3ee;">
+          <rect x="0" y="8" width="14" height="14" rx="3" fill="#0ea5e9" stroke="none"/>
+          <rect x="18" y="24" width="14" height="14" rx="3" fill="#22d3ee" stroke="none"/>
+          <rect x="36" y="10" width="14" height="14" rx="3" fill="#67e8f9" stroke="none"/>
+        </g>
+      </g>
+
+      <!-- Schedule (dashed circular node) -->
+      <g>
+        <circle class="card-fill" cx="620" cy="660" r="60"/>
+        <circle class="node-border" style="color:#a855f7; stroke:#a855f7; stroke-dasharray:4 5;" cx="620" cy="660" r="60"/>
+        <g transform="translate(592,632)" class="glyph" style="color:#c084fc; stroke:#c084fc;">
+          <line x1="6" y1="14" x2="50" y2="14"/>
+          <line x1="6" y1="28" x2="42" y2="28"/>
+          <line x1="6" y1="42" x2="50" y2="42"/>
+        </g>
+        <text x="620" y="750" text-anchor="middle" fill="#cbd5e1" font-family="Inter, sans-serif" font-size="14" font-weight="500">Schedule</text>
+      </g>
+
+      <!-- Database (purple block) -->
+      <g>
+        <rect class="card-fill" x="1080" y="580" width="180" height="90" rx="18"/>
+        <rect class="node-border" style="color:#a855f7; stroke:#a855f7;" x="1080" y="580" width="180" height="90" rx="18"/>
+        <g transform="translate(1104,606)" class="glyph" style="color:#d8b4fe; stroke:#d8b4fe;">
+          <ellipse cx="20" cy="8" rx="20" ry="6"/>
+          <path d="M0 8 v24 a20 6 0 0 0 40 0 v-24"/>
+          <path d="M0 20 a20 6 0 0 0 40 0"/>
+        </g>
+        <text x="1170" y="620" fill="#cbd5e1" font-family="Space Grotesk, Inter, sans-serif" font-size="16" font-weight="600">Database</text>
+        <text x="1170" y="642" fill="#a78bfa" font-family="Inter, sans-serif" font-size="12">Vector · SQL</text>
+      </g>
+
+      <!-- Action (green-ish cyan small pill) -->
+      <g>
+        <rect class="card-fill" x="440" y="810" width="180" height="74" rx="18"/>
+        <rect class="node-border" style="color:#22d3ee; stroke:#22d3ee;" x="440" y="810" width="180" height="74" rx="18"/>
+        <g transform="translate(464,836)" class="glyph" style="color:#67e8f9; stroke:#67e8f9;">
+          <polyline points="0 10, 10 18, 24 2"/>
+        </g>
+        <text x="500" y="848" fill="#cbd5e1" font-family="Space Grotesk, Inter, sans-serif" font-size="16" font-weight="600">Action</text>
+      </g>
+
+      <!-- Output (end node, purple) -->
+      <g>
+        <rect class="card-fill" x="1360" y="480" width="220" height="90" rx="18"/>
+        <rect class="node-border" style="color:#a855f7; stroke:#a855f7;" x="1360" y="480" width="220" height="90" rx="18" stroke-width="2"/>
+        <g transform="translate(1386,508)" class="glyph" style="color:#f0abfc; stroke:#f0abfc;">
+          <polyline points="0 10, 14 0, 14 20 Z" fill="#f0abfc" stroke="none"/>
+          <line x1="14" y1="10" x2="36" y2="10"/>
+        </g>
+        <text x="1430" y="508" fill="#e9d5ff" font-family="Space Grotesk, Inter, sans-serif" font-size="18" font-weight="700">Output</text>
+        <text x="1430" y="530" fill="#c4b5fd" font-family="Inter, sans-serif" font-size="12">Webhook · API</text>
+      </g>
+
+      <!-- End node dot cluster -->
+      <g>
+        <rect class="card-fill" x="1360" y="610" width="200" height="60" rx="14"/>
+        <rect class="node-border" style="color:#22d3ee; stroke:#22d3ee;" x="1360" y="610" width="200" height="60" rx="14"/>
+        <circle cx="1390" cy="640" r="5" fill="#22d3ee" class="node-dot" style="color:#22d3ee;"/>
+        <circle cx="1410" cy="640" r="5" fill="#22d3ee" class="node-dot" style="color:#22d3ee;"/>
+        <circle cx="1430" cy="640" r="5" fill="#22d3ee" class="node-dot" style="color:#22d3ee;"/>
+        <text x="1460" y="645" fill="#cbd5e1" font-family="Inter, sans-serif" font-size="12">Delivered</text>
+      </g>
+
+      <!-- Connection dots on paths -->
+      <g>
+        <circle class="node-dot" style="color:#22d3ee;" cx="560" cy="300" r="5" fill="#22d3ee"/>
+        <circle class="node-dot" style="color:#22d3ee;" cx="880" cy="220" r="5" fill="#22d3ee"/>
+        <circle class="node-dot" style="color:#a855f7;" cx="1220" cy="380" r="5" fill="#a855f7"/>
+        <circle class="node-dot" style="color:#22d3ee;" cx="820" cy="500" r="5" fill="#22d3ee"/>
+        <circle class="node-dot" style="color:#22d3ee;" cx="520" cy="680" r="5" fill="#22d3ee"/>
+        <circle class="node-dot" style="color:#a855f7;" cx="840" cy="820" r="5" fill="#a855f7"/>
+        <circle class="node-dot" style="color:#a855f7;" cx="1160" cy="720" r="5" fill="#a855f7"/>
+      </g>
+    </svg>
+  </div>
+
+  <!-- Shooting stars -->
+  <div class="shooting">
+    <span></span><span></span><span></span>
+  </div>
+
+  <div class="spot" id="spot"></div>
+  <div class="grain"></div>
+  <div class="readable"></div>
+  <div class="vignette"></div>
+</div>
+
+<script>
+  (function(){
+    const spot = document.getElementById('spot');
+    window.addEventListener('pointermove', (e)=>{
+      spot.style.setProperty('--mx', e.clientX+'px');
+      spot.style.setProperty('--my', e.clientY+'px');
+    }, {passive:true});
+  })();
+</script>
+
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef } = React;
+
+/* ---------- Icons (inline SVG) ---------- */
+const I = {
+  spark:(p)=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/></svg>,
+  cpu:(p)=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...p}><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2"/></svg>,
+  flow:(p)=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M4 7h10a3 3 0 0 1 0 6H8a3 3 0 0 0 0 6h12"/><circle cx="4" cy="7" r="1.6"/><circle cx="20" cy="19" r="1.6"/></svg>,
+  stack:(p)=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M12 3 3 7.5 12 12l9-4.5L12 3Z"/><path d="M3 12l9 4.5L21 12"/><path d="M3 16.5l9 4.5 9-4.5"/></svg>,
+  rocket:(p)=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M14 3c4 2 7 5 7 11-6 0-9-3-11-7l4-4Z"/><path d="M7 17c-2 0-4 2-4 4 2 0 4-2 4-4Z"/><path d="M10 14l-3 3"/><circle cx="16" cy="8" r="1"/></svg>,
+  arrow:(p)=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M5 12h14M13 6l6 6-6 6"/></svg>,
+  check:(p)=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M4 12l5 5L20 6"/></svg>,
+  target:(p)=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...p}><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>,
+  compass:(p)=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" {...p}><circle cx="12" cy="12" r="9"/><path d="m15 9-2 6-6 2 2-6 6-2Z" fill="currentColor" fillOpacity="0.2"/></svg>,
+};
+
+/* ---------- Scroll-reveal helper ---------- */
+function Reveal({ children, delay=0, className="" }){
+  const ref = useRef(null);
+  const [show, setShow] = useState(false);
+  useEffect(()=>{
+    const el = ref.current; if(!el) return;
+    const io = new IntersectionObserver(([e])=>{
+      if(e.isIntersecting){ setShow(true); io.disconnect(); }
+    }, { threshold:0.12 });
+    io.observe(el); return ()=>io.disconnect();
+  },[]);
+  return (
+    <div ref={ref} style={{transitionDelay:`${delay}ms`}}
+      className={`transition-all duration-[900ms] ease-out ${show?'opacity-100 translate-y-0':'opacity-0 translate-y-6'} ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+function Logo({ compact = false }){
+  const h = compact ? 42 : 52;
+  const w = Math.round(h * (160/200));
+  return (
+    <a href="#home" className="group flex items-center gap-3">
+      <span className="relative block"
+            style={{ width:w, height:h, filter:'drop-shadow(0 0 12px rgba(34,211,238,0.45)) drop-shadow(0 0 20px rgba(168,85,247,0.3))' }}>
+        <img src="galtrix-logo-mark.svg" alt="GALTRIX" width={w} height={h}
+             style={{ display:'block', width:'100%', height:'100%' }}/>
+      </span>
+      <span className="flex flex-col leading-tight">
+        <span className="font-display text-[13px] font-bold uppercase tracking-[0.42em] text-white"
+              style={{ textShadow:'0 0 18px rgba(34,211,238,0.25)' }}>GALTRIX</span>
+        <span className="text-[9px] uppercase tracking-[0.38em] text-cyan-300/80">Built for what&apos;s next</span>
+      </span>
+    </a>
+  );
+}
+
+function Header(){
+  const links = [
+    {id:'about', label:'About'},
+    {id:'focus', label:'Focus'},
+    {id:'principles', label:'Principles'},
+    {id:'founders', label:'Founders'},
+    {id:'contact', label:'Contact'},
+  ];
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(()=>{
+    const on = ()=>setScrolled(window.scrollY>16);
+    on(); window.addEventListener('scroll', on, {passive:true});
+    return ()=>window.removeEventListener('scroll', on);
+  },[]);
+  return (
+    <header className={`sticky top-0 z-50 transition-colors ${scrolled?'border-b border-white/10 bg-[#04050d]/80 backdrop-blur-2xl':'bg-transparent'}`}>
+      <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-4 lg:px-10">
+        <Logo/>
+        <nav className="hidden items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] p-1 backdrop-blur-xl md:flex">
+          {links.map(l=>(
+            <a key={l.id} href={`#${l.id}`} className="rounded-full px-4 py-1.5 text-[13px] font-medium text-white/70 transition hover:text-white hover:bg-white/10">{l.label}</a>
+          ))}
+        </nav>
+        <a href="#contact" className="group inline-flex items-center gap-2 rounded-full border border-cyan-300/40 bg-gradient-to-r from-cyan-400 to-purple-500 px-5 py-2.5 text-sm font-semibold text-[#04050d] glow-cyan transition hover:scale-[1.02]">
+          Start a Project
+          <I.arrow className="h-4 w-4 transition group-hover:translate-x-0.5"/>
+        </a>
+      </div>
+    </header>
+  );
+}
+
+function Hero(){
+  return (
+    <section id="home" className="relative">
+      <div className="mx-auto grid min-h-[94vh] w-full max-w-7xl items-center gap-12 px-6 py-24 lg:grid-cols-[1.1fr_0.9fr] lg:px-10">
+        <div className="relative z-20 max-w-3xl">
+          <Reveal>
+            <div className="mb-6 inline-flex items-center gap-3 rounded-full border border-cyan-300/30 bg-cyan-300/5 px-4 py-2 text-[11px] uppercase tracking-[0.32em] text-cyan-200 backdrop-blur">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-300 opacity-70"/>
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-cyan-300 glow-cyan"/>
+              </span>
+              Private Corporation &mdash; Venture Platform
+            </div>
+          </Reveal>
+
+          <Reveal delay={120}>
+            <h1 className="font-display text-[48px] font-bold leading-[0.95] tracking-[-0.045em] text-white sm:text-6xl lg:text-[96px]">
+              <span className="block">GALTRIX</span>
+              <span className="block mt-3 text-[24px] sm:text-3xl lg:text-[40px] font-medium text-white/80">
+                Built for <span className="bg-gradient-to-r from-cyan-300 via-white to-purple-300 bg-clip-text text-transparent">What&apos;s Next.</span>
+              </span>
+            </h1>
+          </Reveal>
+
+          <Reveal delay={240}>
+            <p className="mt-8 max-w-2xl text-base leading-8 text-white/75 sm:text-lg">
+              A forward-thinking corporation focused on innovation, technology, and intelligent solutions.
+              Built on ambition, precision, and vision &mdash; designed to create scalable ventures across
+              AI, automation, digital infrastructure, and next-generation business systems.
+            </p>
+          </Reveal>
+
+          <Reveal delay={360}>
+            <div className="mt-10 flex flex-wrap items-center gap-4">
+              <a href="#focus" className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-400 to-purple-500 px-6 py-3.5 text-sm font-semibold text-[#04050d] glow-cyan transition hover:shadow-[0_0_60px_rgba(34,211,238,0.45)]">
+                Explore Focus Areas
+                <I.arrow className="h-4 w-4 transition group-hover:translate-x-0.5"/>
+              </a>
+              <a href="#about" className="inline-flex items-center gap-2 rounded-full border border-purple-400/40 bg-purple-400/5 px-6 py-3.5 text-sm text-purple-100 backdrop-blur transition hover:bg-purple-400/10 hover:border-purple-300/60">
+                View Corporate Profile
+              </a>
+            </div>
+          </Reveal>
+
+          <Reveal delay={520}>
+            <div className="mt-16 grid grid-cols-2 gap-6 sm:grid-cols-4 max-w-2xl">
+              {[
+                ['AI', 'Artificial Intelligence'],
+                ['AUTO', 'Automation'],
+                ['INFRA', 'Digital Infrastructure'],
+                ['VNTR', 'Strategic Ventures'],
+              ].map(([k,v])=>(
+                <div key={k} className="border-l border-white/10 pl-3">
+                  <div className="font-display text-xs font-bold tracking-[0.2em] text-cyan-300">{k}</div>
+                  <div className="mt-1 text-[12px] leading-5 text-white/65">{v}</div>
+                </div>
+              ))}
+            </div>
+          </Reveal>
+        </div>
+
+        {/* Right: portal visual */}
+        <Reveal delay={400}>
+          <div className="relative flex items-center justify-center py-8 lg:py-0">
+            <div className="relative aspect-square w-full max-w-[420px]">
+              {/* rings */}
+              <div className="absolute inset-0 rounded-full border border-cyan-300/25 glow-cyan"/>
+              <div className="absolute inset-[10%] rounded-full border border-purple-400/25 glow-purple"/>
+              <div className="absolute inset-[22%] rounded-full border border-cyan-300/30 glow-cyan"/>
+              <div className="absolute inset-[36%] rounded-full border border-purple-400/30 glow-purple"/>
+              {/* core */}
+              <div className="absolute inset-[42%] rounded-full bg-gradient-to-br from-cyan-300 via-white to-purple-400 glow-cyan animate-pulse"/>
+              {/* orbiting dots */}
+              <div className="absolute inset-0 animate-[spin_18s_linear_infinite]">
+                <div className="absolute left-1/2 top-0 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-300 glow-cyan"/>
+              </div>
+              <div className="absolute inset-[10%] animate-[spin_28s_linear_infinite_reverse]">
+                <div className="absolute right-0 top-1/2 h-2.5 w-2.5 -translate-y-1/2 translate-x-1/2 rounded-full bg-purple-400 glow-purple"/>
+              </div>
+              <div className="absolute inset-[22%] animate-[spin_36s_linear_infinite]">
+                <div className="absolute left-1/2 bottom-0 h-2 w-2 -translate-x-1/2 translate-y-1/2 rounded-full bg-cyan-200 glow-cyan"/>
+              </div>
+            </div>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+function About(){
+  const meta = [
+    { k:'Founders', v:'Jann Gabriel Guillermety · Edwin Gabriel Garcia' },
+    { k:'Company Type', v:'Private Corporation / Venture Platform' },
+    { k:'Primary Identity', v:'AI · Automation · Digital Infrastructure · Scalable Ventures' },
+    { k:'Positioning', v:'Modern, premium, and future-facing' },
+  ];
+  return (
+    <section id="about" className="relative border-t border-white/10">
+      <div className="mx-auto w-full max-w-7xl px-6 py-28 lg:px-10">
+        <div className="divider-glow mb-16 w-32"/>
+        <div className="grid gap-12 lg:grid-cols-[0.85fr_1.15fr]">
+          <Reveal>
+            <div className="text-[11px] uppercase tracking-[0.4em] text-cyan-300/90">About Galtrix</div>
+            <h2 className="mt-5 font-display text-4xl font-bold leading-[1.05] tracking-[-0.035em] text-white sm:text-5xl lg:text-6xl">
+              A corporate overview of innovation, technology, and intelligent systems.
+            </h2>
+          </Reveal>
+          <Reveal delay={150}>
+            <p className="text-[15px] leading-8 text-white/75">
+              Galtrix is a forward-thinking corporation focused on innovation, technology, and
+              intelligent solutions for the future. Built on ambition, precision, and vision,
+              Galtrix is designed to create scalable ventures across AI, automation, digital
+              infrastructure, and next-generation business systems.
+            </p>
+            <p className="mt-5 text-[15px] leading-8 text-white/65">
+              Our mission is to develop powerful ideas into lasting enterprises that shape
+              industries and drive progress.
+            </p>
+          </Reveal>
+        </div>
+
+        {/* Meta grid */}
+        <div className="mt-16 grid gap-px overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] sm:grid-cols-2">
+          {meta.map((m,i)=>(
+            <Reveal key={m.k} delay={i*100}>
+              <div className="border border-white/5 bg-[#06081a]/50 p-7 backdrop-blur-xl transition hover:bg-[#06081a]/80">
+                <div className="text-[11px] uppercase tracking-[0.35em] text-cyan-300/80">{m.k}</div>
+                <div className="mt-3 text-lg font-medium text-white">{m.v}</div>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+
+        {/* Vision + Mission */}
+        <div className="mt-10 grid gap-6 md:grid-cols-2">
+          <Reveal>
+            <div className="relative h-full overflow-hidden rounded-3xl border border-cyan-300/30 bg-[#06081a]/70 p-8 backdrop-blur-xl glow-cyan">
+              <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-cyan-400/15 blur-3xl"/>
+              <div className="relative flex items-center gap-3">
+                <span className="grid h-10 w-10 place-items-center rounded-xl border border-cyan-300/40 bg-cyan-300/10"><I.target className="h-5 w-5 text-cyan-300"/></span>
+                <div className="text-[11px] uppercase tracking-[0.4em] text-cyan-300">Vision</div>
+              </div>
+              <p className="relative mt-6 text-[15px] leading-8 text-white/80">
+                To build a modern enterprise platform where engineering, automation, and strategic
+                thinking converge to create high-impact businesses with long-term value.
+              </p>
+            </div>
+          </Reveal>
+          <Reveal delay={120}>
+            <div className="relative h-full overflow-hidden rounded-3xl border border-purple-400/30 bg-[#06081a]/70 p-8 backdrop-blur-xl glow-purple">
+              <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-purple-400/15 blur-3xl"/>
+              <div className="relative flex items-center gap-3">
+                <span className="grid h-10 w-10 place-items-center rounded-xl border border-purple-300/40 bg-purple-300/10"><I.compass className="h-5 w-5 text-purple-300"/></span>
+                <div className="text-[11px] uppercase tracking-[0.4em] text-purple-300">Mission</div>
+              </div>
+              <p className="relative mt-6 text-[15px] leading-8 text-white/80">
+                Develop intelligent systems, scalable ventures, and premium digital solutions that
+                transform ambition into operational excellence.
+              </p>
+            </div>
+          </Reveal>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Focus(){
+  const items = [
+    { icon:I.cpu, accent:'cyan', title:'Artificial Intelligence', text:'Applied AI systems, intelligent workflows, and next-generation digital services.' },
+    { icon:I.flow, accent:'purple', title:'Automation', text:'Operational tools and process automation designed for efficiency, scale, and reliability.' },
+    { icon:I.stack, accent:'cyan', title:'Digital Infrastructure', text:'Technology foundations that support performance, growth, and modern business execution.' },
+    { icon:I.rocket, accent:'purple', title:'Strategic Ventures', text:'A scalable business model built to expand into future products, services, and markets.' },
+  ];
+  return (
+    <section id="focus" className="relative border-t border-white/10">
+      <div className="mx-auto w-full max-w-7xl px-6 py-28 lg:px-10">
+        <div className="flex flex-wrap items-end justify-between gap-8">
+          <Reveal className="max-w-2xl">
+            <div className="text-[11px] uppercase tracking-[0.4em] text-purple-300/90">Strategic Focus</div>
+            <h2 className="mt-5 font-display text-4xl font-bold leading-[1.05] tracking-[-0.035em] text-white sm:text-5xl lg:text-6xl">
+              A scalable brand platform across high-value sectors.
+            </h2>
+          </Reveal>
+          <Reveal delay={150}>
+            <p className="max-w-md text-[14px] leading-7 text-white/60">
+              Galtrix is structured to operate as a scalable brand platform with room to expand
+              into multiple high-value sectors.
+            </p>
+          </Reveal>
+        </div>
+
+        <div className="mt-14 grid gap-5 md:grid-cols-2">
+          {items.map((c,i)=>{
+            const Icn = c.icon;
+            const isCyan = c.accent==='cyan';
+            return (
+              <Reveal key={c.title} delay={(i%2)*120}>
+                <div className={`group relative h-full overflow-hidden rounded-[28px] border bg-[#06081a]/70 p-8 backdrop-blur-xl transition hover:-translate-y-1 ${isCyan?'border-cyan-300/20 hover:border-cyan-300/40 hover:glow-cyan':'border-purple-400/20 hover:border-purple-400/40 hover:glow-purple'}`}>
+                  <div aria-hidden className={`pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full blur-3xl transition-opacity ${isCyan?'bg-cyan-400/10 group-hover:bg-cyan-400/25':'bg-purple-400/10 group-hover:bg-purple-400/25'}`}/>
+                  <div className="relative flex items-start justify-between">
+                    <div className={`grid h-14 w-14 place-items-center rounded-2xl border ${isCyan?'border-cyan-300/30 bg-cyan-300/5':'border-purple-400/30 bg-purple-400/5'}`}>
+                      <Icn className={`h-6 w-6 ${isCyan?'text-cyan-300':'text-purple-300'}`}/>
+                    </div>
+                    <span className={`font-display text-[11px] font-bold tracking-[0.3em] ${isCyan?'text-cyan-300/80':'text-purple-300/80'}`}>0{i+1}</span>
+                  </div>
+                  <h3 className="relative mt-6 text-2xl font-semibold text-white">{c.title}</h3>
+                  <p className="relative mt-3 text-[14px] leading-7 text-white/70">{c.text}</p>
+                  <div className={`relative mt-8 h-px w-full bg-gradient-to-r ${isCyan?'from-cyan-300/60 via-white/10 to-transparent':'from-purple-400/60 via-white/10 to-transparent'}`}/>
+                </div>
+              </Reveal>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Principles(){
+  const items = [
+    'Precision in execution',
+    'Scalable systems over temporary fixes',
+    'Modern design with real-world utility',
+    'Long-term value creation',
+  ];
+  return (
+    <section id="principles" className="relative border-t border-white/10">
+      <div className="mx-auto w-full max-w-7xl px-6 py-28 lg:px-10">
+        <div className="grid gap-16 lg:grid-cols-[0.9fr_1.1fr]">
+          <Reveal>
+            <div className="text-[11px] uppercase tracking-[0.4em] text-cyan-300/90">Core Principles</div>
+            <h2 className="mt-5 font-display text-4xl font-bold leading-[1.05] tracking-[-0.035em] text-white sm:text-5xl lg:text-6xl">
+              Disciplined ambition. Intelligent execution.
+            </h2>
+            <div className="mt-10 rounded-3xl border border-gradient-to-r border-cyan-300/20 bg-[#06081a]/70 p-7 backdrop-blur-xl"
+                 style={{borderImage:'linear-gradient(135deg,rgba(34,211,238,0.4),rgba(168,85,247,0.4)) 1'}}>
+              <div className="text-[11px] uppercase tracking-[0.38em] text-purple-300">Brand Statement</div>
+              <p className="mt-4 text-lg leading-8 text-white/85">
+                Galtrix represents <span className="text-glow-cyan text-cyan-200">disciplined ambition</span>,{' '}
+                <span className="text-glow-purple text-purple-200">intelligent execution</span>, and the pursuit of lasting enterprise value.
+              </p>
+            </div>
+          </Reveal>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            {items.map((t, i)=>(
+              <Reveal key={t} delay={i*110}>
+                <div className="group relative h-full overflow-hidden rounded-3xl border border-white/10 bg-[#06081a]/70 p-7 backdrop-blur-xl transition hover:border-white/25">
+                  <div className="flex items-center justify-between">
+                    <span className={`font-display text-3xl font-bold ${i%2===0?'text-cyan-300 text-glow-cyan':'text-purple-300 text-glow-purple'}`}>
+                      0{i+1}
+                    </span>
+                    <span className={`grid h-9 w-9 place-items-center rounded-full border ${i%2===0?'border-cyan-300/40 bg-cyan-300/10':'border-purple-400/40 bg-purple-400/10'}`}>
+                      <I.check className={`h-4 w-4 ${i%2===0?'text-cyan-300':'text-purple-300'}`}/>
+                    </span>
+                  </div>
+                  <div className="mt-6 text-lg font-medium text-white">{t}</div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Founders(){
+  const people = [
+    { name:'Jann Gabriel Guillermety', role:'Co-Founder', initials:'JG', accent:'cyan' },
+    { name:'Edwin Gabriel Garcia',    role:'Co-Founder', initials:'EG', accent:'purple' },
+  ];
+  return (
+    <section id="founders" className="relative border-t border-white/10">
+      <div className="mx-auto w-full max-w-7xl px-6 py-28 lg:px-10">
+        <Reveal className="max-w-2xl">
+          <div className="text-[11px] uppercase tracking-[0.4em] text-purple-300/90">Founders</div>
+          <h2 className="mt-5 font-display text-4xl font-bold leading-[1.05] tracking-[-0.035em] text-white sm:text-5xl lg:text-6xl">
+            Built by operators with a long-term view.
+          </h2>
+        </Reveal>
+        <div className="mt-14 grid gap-6 md:grid-cols-2">
+          {people.map((p,i)=>{
+            const isCyan = p.accent==='cyan';
+            return (
+              <Reveal key={p.name} delay={i*120}>
+                <div className={`group relative overflow-hidden rounded-3xl border bg-[#06081a]/70 p-8 backdrop-blur-xl transition hover:-translate-y-1 ${isCyan?'border-cyan-300/25 hover:glow-cyan':'border-purple-400/25 hover:glow-purple'}`}>
+                  <div aria-hidden className={`pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full blur-3xl ${isCyan?'bg-cyan-400/15':'bg-purple-400/15'}`}/>
+                  <div className="relative flex items-center gap-5">
+                    <div className={`grid h-20 w-20 place-items-center rounded-2xl border text-lg font-display font-bold tracking-[0.1em] ${isCyan?'border-cyan-300/40 bg-cyan-300/10 text-cyan-200 glow-cyan':'border-purple-400/40 bg-purple-400/10 text-purple-200 glow-purple'}`}>
+                      {p.initials}
+                    </div>
+                    <div>
+                      <div className="text-xs uppercase tracking-[0.3em] text-white/50">{p.role}</div>
+                      <div className="mt-1 text-xl font-semibold text-white">{p.name}</div>
+                    </div>
+                  </div>
+                  <div className="relative mt-8 h-px w-full bg-gradient-to-r from-transparent via-white/15 to-transparent"/>
+                  <p className="relative mt-6 text-[14px] leading-7 text-white/65">
+                    Driving Galtrix's vision across engineering, automation, and strategic ventures &mdash;
+                    building intelligent systems with long-term value.
+                  </p>
+                </div>
+              </Reveal>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Contact(){
+  const [form, setForm] = useState({ fullName:'', email:'', project:'' });
+  const [status, setStatus] = useState('idle'); // 'idle' | 'sending' | 'sent' | 'error'
+  const onChange = (k)=>(e)=>setForm(f=>({...f,[k]:e.target.value}));
+
+  const submit = async (e)=>{
+    e.preventDefault();
+    setStatus('sending');
+    try {
+      const data = new FormData();
+      data.append('fullName', form.fullName);
+      data.append('email', form.email);
+      data.append('project', form.project);
+      data.append('source', 'Galtrix Website Contact Form');
+      const res = await fetch('https://formspree.io/f/xykljbzj', {
+        method: 'POST',
+        body: data,
+        headers: { 'Accept': 'application/json' },
+      });
+      if (res.ok) setStatus('sent'); else setStatus('error');
+    } catch {
+      setStatus('error');
+    }
+  };
+
+  const inputBase = "w-full rounded-2xl border bg-[#04050d]/60 px-4 py-3.5 text-sm text-white outline-none placeholder:text-white/30 transition focus:bg-[#04050d]/90";
+
+  return (
+    <section id="contact" className="relative border-t border-white/10">
+      <div className="mx-auto grid w-full max-w-7xl gap-12 px-6 py-28 lg:grid-cols-[1fr_0.95fr] lg:px-10">
+        <Reveal>
+          <div className="text-[11px] uppercase tracking-[0.4em] text-cyan-300/90">Contact</div>
+          <h2 className="mt-5 font-display text-4xl font-bold leading-[1.05] tracking-[-0.035em] text-white sm:text-5xl lg:text-6xl">
+            Start the next phase of your digital presence.
+          </h2>
+          <p className="mt-6 max-w-lg text-[15px] leading-8 text-white/70">
+            Galtrix partners with ambitious teams building at the edges of AI, automation, and
+            digital infrastructure. Share your project and our team will follow up.
+          </p>
+          <ul className="mt-10 space-y-4 text-[14px] text-white/80">
+            {['Enterprise-grade positioning','Scalable systems, engineered to last','Modern design with real-world utility'].map((t, i)=>(
+              <li key={t} className="flex items-center gap-3">
+                <span className={`grid h-6 w-6 place-items-center rounded-full border ${i%2===0?'border-cyan-300/40 bg-cyan-300/10':'border-purple-400/40 bg-purple-400/10'}`}>
+                  <I.check className={`h-3.5 w-3.5 ${i%2===0?'text-cyan-200':'text-purple-200'}`}/>
+                </span>
+                {t}
+              </li>
+            ))}
+          </ul>
+        </Reveal>
+
+        <Reveal delay={140}>
+          <form
+            action="https://formspree.io/f/xykljbzj"
+            method="POST"
+            onSubmit={submit}
+            className="relative overflow-hidden rounded-[32px] border border-cyan-300/20 bg-[#06081a]/80 p-7 backdrop-blur-2xl glow-cyan">
+            <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-cyan-400/15 blur-3xl"/>
+            <div aria-hidden className="pointer-events-none absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-purple-400/15 blur-3xl"/>
+
+            <input type="hidden" name="source" value="Galtrix Website Contact Form" />
+
+            {status === 'sent' ? (
+              <div className="relative flex flex-col items-center justify-center gap-4 py-16 text-center">
+                <div className="grid h-16 w-16 place-items-center rounded-full border border-cyan-300/40 bg-cyan-300/10 glow-cyan">
+                  <I.check className="h-8 w-8 text-cyan-200"/>
+                </div>
+                <div className="text-xl font-semibold text-white">Thank you. Your inquiry has been received.</div>
+                <button type="button" onClick={()=>{setStatus('idle'); setForm({fullName:'',email:'',project:''});}}
+                  className="mt-4 rounded-full border border-white/15 px-5 py-2 text-sm text-white/80 transition hover:border-white/30 hover:text-white">
+                  Send another
+                </button>
+              </div>
+            ) : (
+              <div className="relative grid gap-4">
+                <label className="block">
+                  <span className="mb-2 block text-[11px] uppercase tracking-[0.3em] text-white/50">Full Name</span>
+                  <input
+                    name="fullName"
+                    value={form.fullName}
+                    onChange={onChange('fullName')}
+                    required
+                    className={`${inputBase} border-white/10 focus:border-cyan-300/50`}
+                    placeholder="Your name" />
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-[11px] uppercase tracking-[0.3em] text-white/50">Email</span>
+                  <input
+                    type="email"
+                    name="email"
+                    value={form.email}
+                    onChange={onChange('email')}
+                    required
+                    pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
+                    className={`${inputBase} border-white/10 focus:border-purple-400/50`}
+                    placeholder="you@company.com" />
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-[11px] uppercase tracking-[0.3em] text-white/50">Tell us about your project</span>
+                  <textarea
+                    name="project"
+                    value={form.project}
+                    onChange={onChange('project')}
+                    required
+                    className={`${inputBase} min-h-[140px] border-white/10 focus:border-cyan-300/50`}
+                    placeholder="What are you trying to build?" />
+                </label>
+                <button type="submit" disabled={status==='sending'}
+                  className="group mt-2 inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-400 to-purple-500 px-5 py-4 text-sm font-semibold text-[#04050d] glow-cyan transition hover:shadow-[0_0_60px_rgba(168,85,247,0.5)] disabled:opacity-70">
+                  {status==='sending' ? 'Sending…' : 'Submit Inquiry'}
+                  <I.arrow className="h-4 w-4 transition group-hover:translate-x-0.5"/>
+                </button>
+                {status === 'error' && (
+                  <p className="text-center text-[13px] text-red-300/90">
+                    Something went wrong. Please try again.
+                  </p>
+                )}
+                <p className="text-center text-[11px] uppercase tracking-[0.25em] text-white/35">
+                  We&apos;ll never share your information.
+                </p>
+              </div>
+            )}
+          </form>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+function Footer(){
+  const cols = [
+    { h:'Company', l:['About','Founders','Principles','Brand'] },
+    { h:'Focus', l:['AI','Automation','Infrastructure','Ventures'] },
+    { h:'Contact', l:['Inquiries','Partnerships','Press','Careers'] },
+  ];
+  return (
+    <footer className="relative border-t border-white/10 bg-[#04050d]/90 backdrop-blur-2xl">
+      <div className="mx-auto grid w-full max-w-7xl gap-12 px-6 py-16 lg:grid-cols-[1.3fr_1fr_1fr_1fr] lg:px-10">
+        <div>
+          <Logo/>
+          <p className="mt-5 max-w-xs text-[13px] leading-7 text-white/55">
+            Galtrix is a private corporation and venture platform &mdash; designed to create
+            scalable ventures across AI, automation, digital infrastructure, and next-generation
+            business systems.
+          </p>
+          <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-cyan-300 glow-cyan"/>
+            <span className="text-[11px] uppercase tracking-[0.3em] text-white/65">Operating globally</span>
+          </div>
+        </div>
+        {cols.map(c=>(
+          <div key={c.h}>
+            <div className="text-[11px] uppercase tracking-[0.4em] text-white/40">{c.h}</div>
+            <ul className="mt-5 space-y-3">
+              {c.l.map(x=>(
+                <li key={x}><a href="#" className="text-[14px] text-white/70 transition hover:text-white">{x}</a></li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+      <div className="border-t border-white/10">
+        <div className="mx-auto flex w-full max-w-7xl flex-col items-start justify-between gap-4 px-6 py-6 text-[12px] uppercase tracking-[0.3em] text-white/45 md:flex-row md:items-center lg:px-10">
+          <div>© {new Date().getFullYear()} GALTRIX — All rights reserved.</div>
+          <div className="flex items-center gap-6">
+            <a href="#" className="transition hover:text-white">Privacy</a>
+            <a href="#" className="transition hover:text-white">Terms</a>
+            <a href="#" className="transition hover:text-white">Security</a>
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+function App(){
+  useEffect(()=>{ document.documentElement.style.scrollBehavior = 'smooth'; }, []);
+  return (
+    <div className="min-h-screen text-white selection:bg-cyan-400/30">
+      <Header/>
+      <main>
+        <Hero/>
+        <About/>
+        <Focus/>
+        <Principles/>
+        <Founders/>
+        <Contact/>
+      </main>
+      <Footer/>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

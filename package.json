@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "esbuild src/app.jsx --bundle --minify --outfile=dist/bundle.js --target=es2020 && tailwindcss -i src/input.css -o dist/style.css --minify",
+    "build": "bash build.sh",
     "build:bun": "bun build src/app.jsx --outfile dist/bundle.js --minify --target browser && bunx tailwindcss -i src/input.css -o dist/style.css --minify",
     "watch:bun": "bun build src/app.jsx --outfile dist/bundle.js --target browser --watch & bunx tailwindcss -i src/input.css -o dist/style.css --watch"
   },

@@ -403,29 +403,93 @@ function Founders(){
   );
 }
 
+// ───────────────────────────────────────────────────────────────────────────
+// Inquiry endpoints
+// ───────────────────────────────────────────────────────────────────────────
+// Formspree handles the internal inquiry notification + Telegram webhook
+// (configured on Formspree's side). Do not change this URL or the Telegram
+// integration breaks.
+const FORMSPREE_URL = 'https://formspree.io/f/xykljbzj';
+
+// Google Apps Script Web App URL — sends the client confirmation email and
+// an internal notification via Gmail. See APPS_SCRIPT_SETUP.md and
+// apps-script/galtrix-confirmation.gs in the repo for setup steps.
+// Replace the placeholder below with the deployed Web App URL after step 9
+// of the setup guide.
+const APPS_SCRIPT_URL = 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL';
+
+const APPS_SCRIPT_CONFIGURED = !APPS_SCRIPT_URL.startsWith('YOUR_');
+
+const isValidEmail = (s)=> /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s).trim());
+
 function Contact(){
-  const [form, setForm] = useState({ fullName:'', email:'', project:'' });
-  const [status, setStatus] = useState('idle'); // 'idle' | 'sending' | 'sent' | 'error'
-  const onChange = (k)=>(e)=>setForm(f=>({...f,[k]:e.target.value}));
+  const [form, setForm] = useState({ fullName:'', email:'', company:'', project:'' });
+  // statuses:
+  //   'idle' | 'sending'
+  //   'sent'             — both Formspree + Apps Script appear successful
+  //   'sent-no-email'    — Formspree ok, but Apps Script call failed at network layer
+  //   'error'            — Formspree failed (inquiry notification didn't go through)
+  const [status, setStatus] = useState('idle');
+  const [validationError, setValidationError] = useState('');
+  const onChange = (k)=>(e)=>{
+    setForm(f=>({...f,[k]:e.target.value}));
+    if (validationError) setValidationError('');
+  };
+
+  const validate = ()=>{
+    if (!form.fullName.trim()) return 'Please enter your name.';
+    if (!form.email.trim()) return 'Please enter your email.';
+    if (!isValidEmail(form.email)) return 'Please enter a valid email address.';
+    if (!form.project.trim()) return 'Please tell us about your project.';
+    return '';
+  };
 
   const submit = async (e)=>{
     e.preventDefault();
+    const err = validate();
+    if (err) { setValidationError(err); return; }
+    setValidationError('');
     setStatus('sending');
-    try {
-      const data = new FormData();
-      data.append('fullName', form.fullName);
-      data.append('email', form.email);
-      data.append('project', form.project);
-      data.append('source', 'Galtrix Website Contact Form');
-      const res = await fetch('https://formspree.io/f/xykljbzj', {
-        method: 'POST',
-        body: data,
-        headers: { 'Accept': 'application/json' },
-      });
-      if (res.ok) setStatus('sent'); else setStatus('error');
-    } catch {
-      setStatus('error');
-    }
+
+    // (1) Formspree submission — keeps existing inquiry + Telegram flow alive
+    const formspreeData = new FormData();
+    formspreeData.append('fullName', form.fullName);
+    formspreeData.append('email',    form.email);
+    formspreeData.append('company',  form.company);
+    formspreeData.append('project',  form.project);
+    formspreeData.append('source',   'Galtrix Website Contact Form');
+
+    const formspreeReq = fetch(FORMSPREE_URL, {
+      method: 'POST',
+      body:    formspreeData,
+      headers: { 'Accept': 'application/json' },
+    }).then(r => r.ok);
+
+    // (2) Apps Script submission — sends Gmail confirmation to the client.
+    // Uses no-cors + text/plain so we avoid Apps Script's CORS preflight
+    // limitations. The response is opaque, so we treat any non-throw as ok.
+    const appsScriptReq = APPS_SCRIPT_CONFIGURED
+      ? fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          mode:   'no-cors',
+          body:   JSON.stringify({
+            name:    form.fullName,
+            email:   form.email,
+            company: form.company,
+            message: form.project,
+            source:  'Galtrix Website Contact Form',
+          }),
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        }).then(()=>true).catch(()=>false)
+      : Promise.resolve(false); // no-op if URL not yet configured
+
+    const [formspreeRes, appsScriptRes] = await Promise.allSettled([formspreeReq, appsScriptReq]);
+    const formspreeOk  = formspreeRes.status === 'fulfilled' && formspreeRes.value === true;
+    const appsScriptOk = appsScriptRes.status === 'fulfilled' && appsScriptRes.value === true;
+
+    if (formspreeOk && appsScriptOk)        setStatus('sent');
+    else if (formspreeOk && !appsScriptOk)  setStatus(APPS_SCRIPT_CONFIGURED ? 'sent-no-email' : 'sent');
+    else                                    setStatus('error');
   };
 
   const inputBase = "w-full rounded-2xl border bg-[#04050d]/60 px-4 py-3.5 text-sm text-white outline-none placeholder:text-white/30 transition focus:bg-[#04050d]/90";
@@ -465,13 +529,25 @@ function Contact(){
 
             <input type="hidden" name="source" value="Galtrix Website Contact Form" />
 
-            {status === 'sent' ? (
-              <div className="relative flex flex-col items-center justify-center gap-4 py-16 text-center">
+            {(status === 'sent' || status === 'sent-no-email') ? (
+              <div className="relative flex flex-col items-center justify-center gap-4 py-12 text-center">
                 <div className="grid h-16 w-16 place-items-center rounded-full border border-cyan-300/40 bg-cyan-300/10 glow-cyan">
                   <I.check className="h-8 w-8 text-cyan-200"/>
                 </div>
                 <div className="text-xl font-semibold text-white">Thank you. Your inquiry has been received.</div>
-                <button type="button" onClick={()=>{setStatus('idle'); setForm({fullName:'',email:'',project:''});}}
+                <p className="max-w-md text-[14px] leading-7 text-white/70">
+                  GALTRIX has received your message successfully.
+                  {status === 'sent' && ' A confirmation email has been sent to your inbox, and our team will review your inquiry shortly.'}
+                  {status === 'sent-no-email' && ' Our team will review your inquiry shortly.'}
+                </p>
+                {status === 'sent-no-email' && (
+                  <p className="max-w-md text-[12px] leading-6 text-amber-200/80">
+                    Note: we couldn&apos;t deliver the automatic confirmation email to your inbox right now,
+                    but your inquiry has been recorded and we&apos;ll be in touch.
+                  </p>
+                )}
+                <button type="button"
+                  onClick={()=>{setStatus('idle'); setForm({fullName:'',email:'',company:'',project:''});}}
                   className="mt-4 rounded-full border border-white/15 px-5 py-2 text-sm text-white/80 transition hover:border-white/30 hover:text-white">
                   Send another
                 </button>
@@ -501,6 +577,15 @@ function Contact(){
                     placeholder="you@company.com" />
                 </label>
                 <label className="block">
+                  <span className="mb-2 block text-[11px] uppercase tracking-[0.3em] text-white/50">Company <span className="text-white/30 normal-case tracking-normal">(optional)</span></span>
+                  <input
+                    name="company"
+                    value={form.company}
+                    onChange={onChange('company')}
+                    className={`${inputBase} border-white/10 focus:border-cyan-300/50`}
+                    placeholder="Your company" />
+                </label>
+                <label className="block">
                   <span className="mb-2 block text-[11px] uppercase tracking-[0.3em] text-white/50">Tell us about your project</span>
                   <textarea
                     name="project"
@@ -515,9 +600,12 @@ function Contact(){
                   {status==='sending' ? 'Sending…' : 'Submit Inquiry'}
                   <I.arrow className="h-4 w-4 transition group-hover:translate-x-0.5"/>
                 </button>
+                {validationError && (
+                  <p className="text-center text-[13px] text-amber-300/90">{validationError}</p>
+                )}
                 {status === 'error' && (
                   <p className="text-center text-[13px] text-red-300/90">
-                    Something went wrong. Please try again.
+                    Inquiry notification could not be completed. Please try again or email us directly at galtrix.info@galtrix.net.
                   </p>
                 )}
                 <p className="text-center text-[11px] uppercase tracking-[0.25em] text-white/35">

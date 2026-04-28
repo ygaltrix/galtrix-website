@@ -1,12 +1,36 @@
+# Dependencies
+node_modules/
+
+# OS
 .DS_Store
 Thumbs.db
-*.log
+# Editor
 .vscode/
 .idea/
-
+*.swp
+# Backups & temp
+*.bak
+*.tmp
+*.b64
+index.html.bak
+# Logs
+*.log
+npm-debug.log*
+bun-debug.log*
+# Logo workshop / preview files (kept locally, not deployed)
+logo-preview.html
+logo-animation.html
+logo-v4.html
+logo-v5.html
+logo-v6.html
+logo-v7.html
+view-logo.html
+logo-transparent-test.html
+logo-animated-test.html
+# Claude config
+.claude/
 # Azure Functions local secrets
 api/local.settings.json
 api/node_modules/
 api/bin/
 api/obj/
-

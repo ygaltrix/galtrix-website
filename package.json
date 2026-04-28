@@ -1,0 +1,20 @@
+{
+  "name": "galtrix-web",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build:js": "bun build src/app.jsx --outfile dist/bundle.js --minify --target browser",
+    "build:css": "bunx tailwindcss -i src/input.css -o dist/style.css --minify",
+    "build": "bun run build:js && bun run build:css",
+    "watch:js": "bun build src/app.jsx --outfile dist/bundle.js --target browser --watch",
+    "watch:css": "bunx tailwindcss -i src/input.css -o dist/style.css --watch",
+    "dev": "bun run watch:js & bun run watch:css"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
+  }
+}

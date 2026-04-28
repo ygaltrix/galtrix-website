@@ -36,13 +36,20 @@ function Reveal({ children, delay=0, className="" }){
 function Logo({ compact = false }){
   const h = compact ? 56 : 72;
   const w = Math.round(h * (945/1024));
+  // Footer (compact) logo is below the fold — defer loading and decoding so
+  // it doesn't compete with the header logo for paint/decode time.
+  const loadHint = compact ? 'lazy' : 'eager';
+  const decodeHint = compact ? 'async' : 'auto';
+  const fetchHint = compact ? 'low' : 'high';
   return (
     <a href="#home" className="group flex items-center">
       <span className="relative block"
             style={{ width:w, height:h, filter:'drop-shadow(0 0 14px rgba(34,211,238,0.35)) drop-shadow(0 0 22px rgba(168,85,247,0.28))' }}>
         <picture>
           <source srcSet="galtrix-logo-animated.webp" type="image/webp"/>
-          <img src="galtrix-logo-transparent.png" alt="GALTRIX — Built for what's next" width={w} height={h}
+          <img src="galtrix-logo-transparent.png" alt="GALTRIX — Built for what's next"
+               width={w} height={h}
+               loading={loadHint} decoding={decodeHint} fetchpriority={fetchHint}
                style={{ display:'block', width:'100%', height:'100%', objectFit:'contain' }}/>
         </picture>
       </span>

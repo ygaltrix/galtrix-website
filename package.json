@@ -3,18 +3,16 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build:js": "bun build src/app.jsx --outfile dist/bundle.js --minify --target browser",
-    "build:css": "bunx tailwindcss -i src/input.css -o dist/style.css --minify",
-    "build": "bun run build:js && bun run build:css",
-    "watch:js": "bun build src/app.jsx --outfile dist/bundle.js --target browser --watch",
-    "watch:css": "bunx tailwindcss -i src/input.css -o dist/style.css --watch",
-    "dev": "bun run watch:js & bun run watch:css"
+    "build": "esbuild src/app.jsx --bundle --minify --outfile=dist/bundle.js --target=es2020 && tailwindcss -i src/input.css -o dist/style.css --minify",
+    "build:bun": "bun build src/app.jsx --outfile dist/bundle.js --minify --target browser && bunx tailwindcss -i src/input.css -o dist/style.css --minify",
+    "watch:bun": "bun build src/app.jsx --outfile dist/bundle.js --target browser --watch & bunx tailwindcss -i src/input.css -o dist/style.css --watch"
   },
   "dependencies": {
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "esbuild": "^0.24.0",
     "tailwindcss": "^3.4.17"
   }
 }

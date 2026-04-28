@@ -416,7 +416,7 @@ const FORMSPREE_URL = 'https://formspree.io/f/xykljbzj';
 // apps-script/galtrix-confirmation.gs in the repo for setup steps.
 // Replace the placeholder below with the deployed Web App URL after step 9
 // of the setup guide.
-const APPS_SCRIPT_URL = 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby01wraZ1Bew0Af1OycbeqMrcmjsnrq4OgsqAyqyspaYTdE9zF-a8AYMe2ArUihiguA/exec';
 
 const APPS_SCRIPT_CONFIGURED = !APPS_SCRIPT_URL.startsWith('YOUR_');
 
@@ -487,9 +487,13 @@ function Contact(){
     const formspreeOk  = formspreeRes.status === 'fulfilled' && formspreeRes.value === true;
     const appsScriptOk = appsScriptRes.status === 'fulfilled' && appsScriptRes.value === true;
 
-    if (formspreeOk && appsScriptOk)        setStatus('sent');
-    else if (formspreeOk && !appsScriptOk)  setStatus(APPS_SCRIPT_CONFIGURED ? 'sent-no-email' : 'sent');
-    else                                    setStatus('error');
+    // 'sent' only when the confirmation email was actually dispatched (URL
+    // configured AND the network call to Apps Script didn't throw). Any other
+    // outcome where Formspree succeeded falls back to 'sent-no-email' so the
+    // success copy doesn't falsely claim a confirmation email was delivered.
+    if (formspreeOk && appsScriptOk)  setStatus('sent');
+    else if (formspreeOk)             setStatus('sent-no-email');
+    else                              setStatus('error');
   };
 
   const inputBase = "w-full rounded-2xl border bg-[#04050d]/60 px-4 py-3.5 text-sm text-white outline-none placeholder:text-white/30 transition focus:bg-[#04050d]/90";
@@ -540,7 +544,7 @@ function Contact(){
                   {status === 'sent' && ' A confirmation email has been sent to your inbox, and our team will review your inquiry shortly.'}
                   {status === 'sent-no-email' && ' Our team will review your inquiry shortly.'}
                 </p>
-                {status === 'sent-no-email' && (
+                {status === 'sent-no-email' && APPS_SCRIPT_CONFIGURED && (
                   <p className="max-w-md text-[12px] leading-6 text-amber-200/80">
                     Note: we couldn&apos;t deliver the automatic confirmation email to your inbox right now,
                     but your inquiry has been recorded and we&apos;ll be in touch.

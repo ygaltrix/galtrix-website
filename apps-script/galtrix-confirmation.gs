@@ -1,13 +1,12 @@
 /**
  * GALTRIX — Gmail confirmation email backend (Google Apps Script)
  * ────────────────────────────────────────────────────────────────────────────
- * Receives an inquiry payload from the GALTRIX website contact form and:
- *   1. Sends a professional confirmation email to the client (via Gmail)
- *   2. Sends an internal notification email to galtrix.info@galtrix.net
+ * Receives an inquiry payload from the GALTRIX website contact form and
+ * sends a confirmation email to the client (via Gmail).
  *
- * The website's existing Formspree + Telegram notification flow is untouched
- * by this script — it runs in parallel and only handles the confirmation email
- * to the client.
+ * The website's existing Formspree + Telegram notification flow handles the
+ * internal "new inquiry" notification — this script runs in parallel and
+ * only handles the client-facing confirmation email.
  *
  * SETUP: see APPS_SCRIPT_SETUP.md in the project root for step-by-step
  * deployment instructions. After deployment, paste the Web App URL into
@@ -24,10 +23,9 @@
  */
 
 // ─── Configuration ─────────────────────────────────────────────────────────
-const INTERNAL_RECIPIENT = 'galtrix.info@galtrix.net';
-const COMPANY_NAME       = 'GALTRIX';
-const SLOGAN             = "Built for What's Next.";
-const FROM_LABEL         = 'GALTRIX Team';
+const COMPANY_NAME = 'GALTRIX';
+const SLOGAN       = "Built for What's Next.";
+const FROM_LABEL   = 'GALTRIX Team';
 
 // ─── Main entry point — runs when the website POSTs the form ───────────────
 function doPost(e) {
@@ -48,14 +46,11 @@ function doPost(e) {
     if (!message)           return jsonError('Message is required.');
 
     // ─── Send the confirmation email to the client ──────────────────────────
+    // Internal notification is handled by Formspree (which also fires the
+    // Telegram alert), so this script only sends the client-facing email.
     sendClientConfirmation(name, email);
 
-    // ─── Send the internal notification to GALTRIX ──────────────────────────
-    // (Formspree also notifies you — this is a backup with reply-to set to
-    //  the client's address so you can hit Reply to respond directly.)
-    sendInternalNotification(name, email, company, message);
-
-    return jsonSuccess('Confirmation and internal notification sent.');
+    return jsonSuccess('Client confirmation sent.');
   } catch (err) {
     // Never throw — Apps Script will return a 500 with no body and the
     // browser will see a CORS-blocked error instead of a useful message.
@@ -93,10 +88,11 @@ function isValidEmail(s) {
 // ─── Client confirmation email ─────────────────────────────────────────────
 function sendClientConfirmation(name, toEmail) {
   const subject = 'Your inquiry has been received';
+  const greetName = name || 'there';
 
   // Plain-text version — every client supports this.
   const plainBody = [
-    'Hi ' + name + ',',
+    'Hi ' + greetName + ',',
     '',
     'Thank you for reaching out to ' + COMPANY_NAME + '.',
     '',
@@ -106,6 +102,8 @@ function sendClientConfirmation(name, toEmail) {
     'We appreciate the opportunity to learn more about your project and how ' +
       COMPANY_NAME + ' may help support your next stage of growth.',
     '',
+    'You can expect a response from our team within 24 to 48 hours.',
+    '',
     'Best regards,',
     COMPANY_NAME + ' Team',
     SLOGAN,
@@ -114,12 +112,13 @@ function sendClientConfirmation(name, toEmail) {
   // Subtle HTML version that renders nicely in Gmail / Apple Mail / Outlook.
   const htmlBody =
     '<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Inter,Arial,sans-serif;color:#0b0f1d;line-height:1.6;font-size:15px;">' +
-      '<p>Hi ' + escapeHtml(name) + ',</p>' +
+      '<p>Hi ' + escapeHtml(greetName) + ',</p>' +
       '<p>Thank you for reaching out to <strong>' + COMPANY_NAME + '</strong>.</p>' +
       '<p>Your inquiry has been successfully received. Our team will review ' +
         'the details you submitted and follow up with you soon.</p>' +
       '<p>We appreciate the opportunity to learn more about your project ' +
         'and how ' + COMPANY_NAME + ' may help support your next stage of growth.</p>' +
+      '<p>You can expect a response from our team within 24 to 48 hours.</p>' +
       '<p style="margin-top:28px;">Best regards,<br>' +
         '<strong>' + COMPANY_NAME + ' Team</strong><br>' +
         '<span style="color:#6b7280;font-size:13px;">' + SLOGAN + '</span>' +
@@ -130,26 +129,6 @@ function sendClientConfirmation(name, toEmail) {
     name:    FROM_LABEL,
     htmlBody: htmlBody,
     // replyTo defaults to the sending Google account (galtrix.info@galtrix.net)
-  });
-}
-
-// ─── Internal notification to GALTRIX ──────────────────────────────────────
-function sendInternalNotification(name, email, company, message) {
-  const subject = 'New ' + COMPANY_NAME + ' Inquiry — ' + name;
-
-  const plainBody = [
-    'A new inquiry has been submitted through the GALTRIX website.',
-    '',
-    'Client Name: '  + name,
-    'Client Email: ' + email,
-    'Company: '      + (company || '(not provided)'),
-    'Message:',
-    message,
-  ].join('\n');
-
-  GmailApp.sendEmail(INTERNAL_RECIPIENT, subject, plainBody, {
-    name:    COMPANY_NAME + ' Website',
-    replyTo: email, // hit Reply in Gmail to respond directly to the client
   });
 }
 

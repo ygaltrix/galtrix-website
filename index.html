@@ -152,8 +152,8 @@
   .bg-stage .graph .card-fill{fill:#060a18;}
   .bg-stage .graph .edge{fill:none; stroke-linecap:round; stroke-linejoin:round; stroke-width:1.8; stroke-dasharray:6 8;
     filter:drop-shadow(0 0 6px currentColor);
-    animation:flow 6s linear infinite;}
-  .bg-stage .graph .edge.slow{animation-duration:9s;}
+    animation:flow 24s linear infinite;}
+  .bg-stage .graph .edge.slow{animation-duration:32s;}
   .bg-stage .graph .edge.rev{animation-direction:reverse;}
   .bg-stage .graph .node-border{fill:none; stroke-width:1.6; filter:drop-shadow(0 0 8px currentColor);}
   .bg-stage .graph .node-dot{filter:drop-shadow(0 0 6px currentColor);}
@@ -161,11 +161,20 @@
   @keyframes flow{to{stroke-dashoffset:-140;}}
 
   /* Pulsing node halos */
-  .bg-stage .graph .halo{ transform-origin:center; animation:halo 3.6s ease-in-out infinite; }
+  .bg-stage .graph .halo{ transform-origin:center; animation:halo 7s ease-in-out infinite; }
   @keyframes halo{0%,100%{opacity:0.35;}50%{opacity:0.9;}}
+
+  /* Defer below-the-fold paint/layout */
+  .cv-auto{ content-visibility:auto; contain-intrinsic-size:auto 800px; }
 
   @media (prefers-reduced-motion: reduce){
     .glow,.edge,.halo,.ribbon,.stars,.stars2,.shooting span{animation:none !important;}
+  }
+  /* On slower devices/Chrome, drop the heaviest background animations */
+  @media (max-width:768px), (update:slow){
+    .bg-stage .graph .edge,.bg-stage .graph .halo,.bg-stage .ribbon,
+    .bg-stage .stars,.bg-stage .stars2,.bg-stage .shooting span{animation:none !important;}
+    .bg-stage .graph{opacity:0.6;}
   }
 </style>
 </head>

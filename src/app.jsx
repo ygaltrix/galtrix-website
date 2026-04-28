@@ -72,10 +72,10 @@ function Header(){
     return ()=>window.removeEventListener('scroll', on);
   },[]);
   return (
-    <header className={`sticky top-0 z-50 transition-colors ${scrolled?'border-b border-white/10 bg-[#04050d]/80 backdrop-blur-2xl':'bg-transparent'}`}>
+    <header className={`sticky top-0 z-50 transition-colors ${scrolled?'border-b border-white/10 bg-[#04050d]/80 backdrop-blur-md':'bg-transparent'}`}>
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-4 lg:px-10">
         <Logo/>
-        <nav className="hidden items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] p-1 backdrop-blur-xl md:flex">
+        <nav className="hidden items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] p-1 backdrop-blur-md md:flex">
           {links.map(l=>(
             <a key={l.id} href={`#${l.id}`} className="rounded-full px-4 py-1.5 text-[13px] font-medium text-white/70 transition hover:text-white hover:bg-white/10">{l.label}</a>
           ))}
@@ -187,7 +187,7 @@ function About(){
     { k:'Positioning', v:'Modern, premium, and future-facing' },
   ];
   return (
-    <section id="about" className="relative border-t border-white/10">
+    <section id="about" className="relative border-t border-white/10 cv-auto">
       <div className="mx-auto w-full max-w-7xl px-6 py-28 lg:px-10">
         <div className="divider-glow mb-16 w-32"/>
         <div className="grid gap-12 lg:grid-cols-[0.85fr_1.15fr]">
@@ -215,7 +215,7 @@ function About(){
         <div className="mt-16 grid gap-px overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] sm:grid-cols-2">
           {meta.map((m,i)=>(
             <Reveal key={m.k} delay={i*100}>
-              <div className="border border-white/5 bg-[#06081a]/50 p-7 backdrop-blur-xl transition hover:bg-[#06081a]/80">
+              <div className="border border-white/5 bg-[#06081a]/50 p-7 backdrop-blur-md transition hover:bg-[#06081a]/80">
                 <div className="text-[11px] uppercase tracking-[0.35em] text-cyan-300/80">{m.k}</div>
                 <div className="mt-3 text-lg font-medium text-white">{m.v}</div>
               </div>
@@ -226,7 +226,7 @@ function About(){
         {/* Vision + Mission */}
         <div className="mt-10 grid gap-6 md:grid-cols-2">
           <Reveal>
-            <div className="relative h-full overflow-hidden rounded-3xl border border-cyan-300/30 bg-[#06081a]/70 p-8 backdrop-blur-xl glow-cyan">
+            <div className="relative h-full overflow-hidden rounded-3xl border border-cyan-300/30 bg-[#06081a]/70 p-8 backdrop-blur-md glow-cyan">
               <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-cyan-400/15 blur-3xl"/>
               <div className="relative flex items-center gap-3">
                 <span className="grid h-10 w-10 place-items-center rounded-xl border border-cyan-300/40 bg-cyan-300/10"><I.target className="h-5 w-5 text-cyan-300"/></span>
@@ -239,7 +239,7 @@ function About(){
             </div>
           </Reveal>
           <Reveal delay={120}>
-            <div className="relative h-full overflow-hidden rounded-3xl border border-purple-400/30 bg-[#06081a]/70 p-8 backdrop-blur-xl glow-purple">
+            <div className="relative h-full overflow-hidden rounded-3xl border border-purple-400/30 bg-[#06081a]/70 p-8 backdrop-blur-md glow-purple">
               <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-purple-400/15 blur-3xl"/>
               <div className="relative flex items-center gap-3">
                 <span className="grid h-10 w-10 place-items-center rounded-xl border border-purple-300/40 bg-purple-300/10"><I.compass className="h-5 w-5 text-purple-300"/></span>
@@ -265,7 +265,7 @@ function Focus(){
     { icon:I.rocket, accent:'purple', title:'Strategic Ventures', text:'A scalable business model built to expand into future products, services, and markets.' },
   ];
   return (
-    <section id="focus" className="relative border-t border-white/10">
+    <section id="focus" className="relative border-t border-white/10 cv-auto">
       <div className="mx-auto w-full max-w-7xl px-6 py-28 lg:px-10">
         <div className="flex flex-wrap items-end justify-between gap-8">
           <Reveal className="max-w-2xl">
@@ -288,7 +288,7 @@ function Focus(){
             const isCyan = c.accent==='cyan';
             return (
               <Reveal key={c.title} delay={(i%2)*120}>
-                <div className={`group relative h-full overflow-hidden rounded-[28px] border bg-[#06081a]/70 p-8 backdrop-blur-xl transition hover:-translate-y-1 ${isCyan?'border-cyan-300/20 hover:border-cyan-300/40 hover:glow-cyan':'border-purple-400/20 hover:border-purple-400/40 hover:glow-purple'}`}>
+                <div className={`group relative h-full overflow-hidden rounded-[28px] border bg-[#06081a]/70 p-8 backdrop-blur-md transition hover:-translate-y-1 ${isCyan?'border-cyan-300/20 hover:border-cyan-300/40 hover:glow-cyan':'border-purple-400/20 hover:border-purple-400/40 hover:glow-purple'}`}>
                   <div aria-hidden className={`pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full blur-3xl transition-opacity ${isCyan?'bg-cyan-400/10 group-hover:bg-cyan-400/25':'bg-purple-400/10 group-hover:bg-purple-400/25'}`}/>
                   <div className="relative flex items-start justify-between">
                     <div className={`grid h-14 w-14 place-items-center rounded-2xl border ${isCyan?'border-cyan-300/30 bg-cyan-300/5':'border-purple-400/30 bg-purple-400/5'}`}>
@@ -317,7 +317,7 @@ function Principles(){
     'Long-term value creation',
   ];
   return (
-    <section id="principles" className="relative border-t border-white/10">
+    <section id="principles" className="relative border-t border-white/10 cv-auto">
       <div className="mx-auto w-full max-w-7xl px-6 py-28 lg:px-10">
         <div className="grid gap-16 lg:grid-cols-[0.9fr_1.1fr]">
           <Reveal>
@@ -325,7 +325,7 @@ function Principles(){
             <h2 className="mt-5 font-display text-4xl font-bold leading-[1.05] tracking-[-0.035em] text-white sm:text-5xl lg:text-6xl">
               Disciplined ambition. Intelligent execution.
             </h2>
-            <div className="mt-10 rounded-3xl border border-gradient-to-r border-cyan-300/20 bg-[#06081a]/70 p-7 backdrop-blur-xl"
+            <div className="mt-10 rounded-3xl border border-gradient-to-r border-cyan-300/20 bg-[#06081a]/70 p-7 backdrop-blur-md"
                  style={{borderImage:'linear-gradient(135deg,rgba(34,211,238,0.4),rgba(168,85,247,0.4)) 1'}}>
               <div className="text-[11px] uppercase tracking-[0.38em] text-purple-300">Brand Statement</div>
               <p className="mt-4 text-lg leading-8 text-white/85">
@@ -338,7 +338,7 @@ function Principles(){
           <div className="grid gap-4 sm:grid-cols-2">
             {items.map((t, i)=>(
               <Reveal key={t} delay={i*110}>
-                <div className="group relative h-full overflow-hidden rounded-3xl border border-white/10 bg-[#06081a]/70 p-7 backdrop-blur-xl transition hover:border-white/25">
+                <div className="group relative h-full overflow-hidden rounded-3xl border border-white/10 bg-[#06081a]/70 p-7 backdrop-blur-md transition hover:border-white/25">
                   <div className="flex items-center justify-between">
                     <span className={`font-display text-3xl font-bold ${i%2===0?'text-cyan-300 text-glow-cyan':'text-purple-300 text-glow-purple'}`}>
                       0{i+1}
@@ -364,7 +364,7 @@ function Founders(){
     { name:'Edwin Gabriel Garcia',    role:'Co-Founder', initials:'EG', accent:'purple' },
   ];
   return (
-    <section id="founders" className="relative border-t border-white/10">
+    <section id="founders" className="relative border-t border-white/10 cv-auto">
       <div className="mx-auto w-full max-w-7xl px-6 py-28 lg:px-10">
         <Reveal className="max-w-2xl">
           <div className="text-[11px] uppercase tracking-[0.4em] text-purple-300/90">Founders</div>
@@ -377,7 +377,7 @@ function Founders(){
             const isCyan = p.accent==='cyan';
             return (
               <Reveal key={p.name} delay={i*120}>
-                <div className={`group relative overflow-hidden rounded-3xl border bg-[#06081a]/70 p-8 backdrop-blur-xl transition hover:-translate-y-1 ${isCyan?'border-cyan-300/25 hover:glow-cyan':'border-purple-400/25 hover:glow-purple'}`}>
+                <div className={`group relative overflow-hidden rounded-3xl border bg-[#06081a]/70 p-8 backdrop-blur-md transition hover:-translate-y-1 ${isCyan?'border-cyan-300/25 hover:glow-cyan':'border-purple-400/25 hover:glow-purple'}`}>
                   <div aria-hidden className={`pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full blur-3xl ${isCyan?'bg-cyan-400/15':'bg-purple-400/15'}`}/>
                   <div className="relative flex items-center gap-5">
                     <div className={`grid h-20 w-20 place-items-center rounded-2xl border text-lg font-display font-bold tracking-[0.1em] ${isCyan?'border-cyan-300/40 bg-cyan-300/10 text-cyan-200 glow-cyan':'border-purple-400/40 bg-purple-400/10 text-purple-200 glow-purple'}`}>
@@ -431,7 +431,7 @@ function Contact(){
   const inputBase = "w-full rounded-2xl border bg-[#04050d]/60 px-4 py-3.5 text-sm text-white outline-none placeholder:text-white/30 transition focus:bg-[#04050d]/90";
 
   return (
-    <section id="contact" className="relative border-t border-white/10">
+    <section id="contact" className="relative border-t border-white/10 cv-auto">
       <div className="mx-auto grid w-full max-w-7xl gap-12 px-6 py-28 lg:grid-cols-[1fr_0.95fr] lg:px-10">
         <Reveal>
           <div className="text-[11px] uppercase tracking-[0.4em] text-cyan-300/90">Contact</div>
@@ -459,7 +459,7 @@ function Contact(){
             action="https://formspree.io/f/xykljbzj"
             method="POST"
             onSubmit={submit}
-            className="relative overflow-hidden rounded-[32px] border border-cyan-300/20 bg-[#06081a]/80 p-7 backdrop-blur-2xl glow-cyan">
+            className="relative overflow-hidden rounded-[32px] border border-cyan-300/20 bg-[#06081a]/80 p-7 backdrop-blur-md glow-cyan">
             <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-cyan-400/15 blur-3xl"/>
             <div aria-hidden className="pointer-events-none absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-purple-400/15 blur-3xl"/>
 
@@ -574,7 +574,7 @@ function Legal(){
     },
   ];
   return (
-    <section id="legal" className="relative border-t border-white/10">
+    <section id="legal" className="relative border-t border-white/10 cv-auto">
       <div className="mx-auto w-full max-w-7xl px-6 py-28 lg:px-10">
         <Reveal className="max-w-2xl">
           <div className="text-[11px] uppercase tracking-[0.4em] text-cyan-300/90">Legal</div>
@@ -588,7 +588,7 @@ function Legal(){
             const isCyan = s.accent==='cyan';
             return (
               <Reveal key={s.id} delay={idx*120}>
-                <div id={s.id} className={`group relative overflow-hidden rounded-[28px] border bg-[#06081a]/70 p-8 backdrop-blur-xl transition lg:p-10 ${isCyan?'border-cyan-300/25 hover:glow-cyan':'border-purple-400/25 hover:glow-purple'}`}>
+                <div id={s.id} className={`group relative overflow-hidden rounded-[28px] border bg-[#06081a]/70 p-8 backdrop-blur-md transition lg:p-10 ${isCyan?'border-cyan-300/25 hover:glow-cyan':'border-purple-400/25 hover:glow-purple'}`}>
                   <div aria-hidden className={`pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full blur-3xl ${isCyan?'bg-cyan-400/10':'bg-purple-400/10'}`}/>
                   <div className="relative grid gap-10 lg:grid-cols-[0.8fr_1.2fr]">
                     <div>
@@ -624,7 +624,7 @@ function Footer(){
     { h:'Legal', l:[{t:'Privacy',h:'#privacy'},{t:'Terms',h:'#terms'},{t:'Security',h:'#security'}] },
   ];
   return (
-    <footer className="relative border-t border-white/10 bg-[#04050d]/90 backdrop-blur-2xl">
+    <footer className="relative border-t border-white/10 bg-[#04050d]/90 backdrop-blur-md">
       <div className="mx-auto grid w-full max-w-7xl gap-12 px-6 py-16 lg:grid-cols-[1.3fr_1fr_1fr_1fr] lg:px-10">
         <div>
           <Logo/>

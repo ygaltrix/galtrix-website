@@ -22,6 +22,7 @@ for f in dashboard.html \
          galtrix-logo-mark.svg \
          galtrix-logo.svg \
          galtrix-logo.png \
+         galtrix-logo-new.png \
          galtrix-logo-transparent.png \
          galtrix-logo-animated.webp \
          "Galtrix Official Logo.pdf" \

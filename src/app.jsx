@@ -34,25 +34,24 @@ function Reveal({ children, delay=0, className="" }){
 }
 
 function Logo({ compact = false }){
-  const h = compact ? 56 : 72;
-  const w = Math.round(h * (945/1024));
-  // Footer (compact) logo is below the fold — defer loading and decoding so
-  // it doesn't compete with the header logo for paint/decode time.
+  // User's Procreate-designed logo (galtrix-logo-new.png — 3508x2480, RGBA).
+  // The image already includes the icon + "GALTRIX" wordmark + tagline, so we
+  // only need to display it at a sensible height; width follows aspect ratio.
+  // Aspect ratio of source: 3508/2480 ≈ 1.41 (wider than tall — wordmark to the right of icon).
+  const h = compact ? 48 : 60;
+  const w = Math.round(h * (3508/2480));
   const loadHint = compact ? 'lazy' : 'eager';
   const decodeHint = compact ? 'async' : 'auto';
   const fetchHint = compact ? 'low' : 'high';
   return (
-    <a href="#home" className="group flex items-center">
-      <span className="relative block"
-            style={{ width:w, height:h, filter:'drop-shadow(0 0 14px rgba(34,211,238,0.35)) drop-shadow(0 0 22px rgba(168,85,247,0.28))' }}>
-        <picture>
-          <source srcSet="galtrix-logo-animated.webp" type="image/webp"/>
-          <img src="galtrix-logo-transparent.png" alt="GALTRIX — Built for what's next"
-               width={w} height={h}
-               loading={loadHint} decoding={decodeHint} fetchpriority={fetchHint}
-               style={{ display:'block', width:'100%', height:'100%', objectFit:'contain' }}/>
-        </picture>
-      </span>
+    <a href="#home" className="group flex items-center" aria-label="GALTRIX — Built for what's next">
+      <img src="galtrix-logo-new.png" alt="GALTRIX — Built for what's next"
+           width={w} height={h}
+           loading={loadHint} decoding={decodeHint} fetchpriority={fetchHint}
+           style={{
+             display:'block', height: h, width: 'auto', maxWidth: w,
+             filter:'drop-shadow(0 0 16px rgba(34,211,238,0.35)) drop-shadow(0 0 26px rgba(168,85,247,0.28))',
+           }}/>
     </a>
   );
 }

@@ -34,11 +34,11 @@ function Reveal({ children, delay=0, className="" }){
 }
 
 function Logo({ compact = false }){
-  // Icon-only logo (cropped from galtrix-logo-new.png → galtrix-icon.png).
+  // Icon-only logo (galtrix-icon.png — user's clean icon-only export).
   // No wordmark or tagline — just the cloud-G mark, like Apple / X / Linear.
-  // Source dimensions: 1515x1595, aspect ratio ≈ 0.95 (almost square).
+  // Source dimensions: 3508x2480, aspect ratio ≈ 1.41 (landscape).
   const h = compact ? 56 : 72;
-  const w = Math.round(h * (1515/1595));
+  const w = Math.round(h * (3508/2480));
   const loadHint = compact ? 'lazy' : 'eager';
   const decodeHint = compact ? 'async' : 'auto';
   const fetchHint = compact ? 'low' : 'high';

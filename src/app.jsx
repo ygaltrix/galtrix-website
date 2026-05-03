@@ -33,17 +33,17 @@ function Reveal({ children, delay=0, className="" }){
   );
 }
 
-function Logo({ compact = false }){
-  // Header  → icon-only mark (galtrix-icon.png)
-  // Footer (compact) → full logo with wordmark + tagline (galtrix-logo-new.png)
+function Logo({ full = false }){
+  // Header (default) → icon-only mark (galtrix-icon.png)
+  // Footer (full)    → full logo with wordmark + tagline (galtrix-logo-new.png)
   // Both source PNGs have aspect ratio ≈ 1.41 (3508x2480).
-  const src = compact ? "galtrix-logo-new.png" : "galtrix-icon.png";
-  const alt = compact ? "GALTRIX — Built for what's next" : "GALTRIX";
-  const h = compact ? 96 : 72;
+  const src = full ? "galtrix-logo-new.png" : "galtrix-icon.png";
+  const alt = full ? "GALTRIX — Built for what's next" : "GALTRIX";
+  const h = full ? 96 : 72;
   const w = Math.round(h * (3508/2480));
-  const loadHint = compact ? 'lazy' : 'eager';
-  const decodeHint = compact ? 'async' : 'auto';
-  const fetchHint = compact ? 'low' : 'high';
+  const loadHint = full ? 'lazy' : 'eager';   // footer is below the fold
+  const decodeHint = full ? 'async' : 'auto';
+  const fetchHint = full ? 'low' : 'high';
   return (
     <a href="#home" className="group flex items-center" aria-label={alt}>
       <img src={src} alt={alt}
@@ -721,7 +721,7 @@ function Footer(){
     <footer className="relative border-t border-white/10 bg-[#04050d]/90 backdrop-blur-md">
       <div className="mx-auto grid w-full max-w-7xl gap-12 px-6 py-16 lg:grid-cols-[1.3fr_1fr_1fr_1fr] lg:px-10">
         <div>
-          <Logo/>
+          <Logo full/>
           <p className="mt-5 max-w-xs text-[13px] leading-7 text-white/55">
             Galtrix is a private corporation and venture platform &mdash; designed to create
             scalable ventures across AI, automation, digital infrastructure, and next-generation

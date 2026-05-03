@@ -38,83 +38,45 @@
     -webkit-mask-image:radial-gradient(ellipse 75% 60% at 50% 35%, #000 25%, transparent 85%);
             mask-image:radial-gradient(ellipse 75% 60% at 50% 35%, #000 25%, transparent 85%);}
 
-  /* Aurora glows */
-  .bg-stage .glow{position:absolute; border-radius:50%; filter:blur(110px); mix-blend-mode:screen; will-change:transform;}
-  .bg-stage .glow.cyan{width:70vmax; height:70vmax; top:-20%; left:-20%;
-    background:radial-gradient(circle, rgba(34,211,238,0.75), rgba(34,211,238,0) 60%);
-    animation:float1 34s ease-in-out infinite;}
-  .bg-stage .glow.purple{width:70vmax; height:70vmax; top:10%; right:-25%;
-    background:radial-gradient(circle, rgba(168,85,247,0.75), rgba(168,85,247,0) 60%);
-    animation:float2 42s ease-in-out infinite;}
-  .bg-stage .glow.cyan2{width:55vmax; height:55vmax; bottom:-25%; left:20%;
-    background:radial-gradient(circle, rgba(56,189,248,0.45), rgba(56,189,248,0) 60%);
-    animation:float3 50s ease-in-out infinite;}
-  .bg-stage .glow.purple2{width:45vmax; height:45vmax; top:40%; left:40%;
-    background:radial-gradient(circle, rgba(217,70,239,0.35), rgba(217,70,239,0) 60%);
-    animation:float4 46s ease-in-out infinite;}
+  /* Aurora glows — STATIC, smaller blur, no mix-blend-mode. ~75% cheaper than before. */
+  .bg-stage .glow{position:absolute; border-radius:50%; filter:blur(70px); opacity:0.55;}
+  .bg-stage .glow.cyan{width:55vmax; height:55vmax; top:-18%; left:-18%;
+    background:radial-gradient(circle, rgba(34,211,238,0.65), rgba(34,211,238,0) 65%);}
+  .bg-stage .glow.purple{width:55vmax; height:55vmax; top:5%; right:-22%;
+    background:radial-gradient(circle, rgba(168,85,247,0.6), rgba(168,85,247,0) 65%);}
+  .bg-stage .glow.cyan2{width:45vmax; height:45vmax; bottom:-22%; left:25%;
+    background:radial-gradient(circle, rgba(56,189,248,0.4), rgba(56,189,248,0) 65%);}
+  /* removed glow.purple2 and ribbon — they were the worst paint-cost offenders */
 
-  /* Soft aurora ribbon sweeping horizontally */
-  .bg-stage .ribbon{position:absolute; left:-30%; right:-30%; height:45vh; top:35%; filter:blur(60px); opacity:0.55; mix-blend-mode:screen;
-    background:linear-gradient(110deg, transparent 0%, rgba(34,211,238,0.35) 25%, rgba(168,85,247,0.45) 55%, transparent 80%);
-    animation:ribbon 24s ease-in-out infinite;}
-
-  /* Cursor spotlight */
+  /* Static center spot (no longer follows cursor → saves a full-screen repaint per mouse move) */
   .bg-stage .spot{position:absolute; inset:0;
-    background:radial-gradient(520px circle at var(--mx,50%) var(--my,30%), rgba(34,211,238,0.16), transparent 55%),
-               radial-gradient(360px circle at var(--mx,50%) var(--my,30%), rgba(168,85,247,0.10), transparent 55%);}
+    background:radial-gradient(520px circle at 50% 30%, rgba(34,211,238,0.14), transparent 55%),
+               radial-gradient(360px circle at 60% 35%, rgba(168,85,247,0.09), transparent 55%);}
 
-  /* Starfield */
-  .bg-stage .stars, .bg-stage .stars2{position:absolute; inset:-50px;}
-  .bg-stage .stars::before, .bg-stage .stars2::before{
+  /* Starfield — single static layer (was 2 layers + twinkle + drift animations) */
+  .bg-stage .stars{position:absolute; inset:-50px;}
+  .bg-stage .stars::before{
     content:""; position:absolute; inset:0;
     background-image:
-      radial-gradient(1px 1px at 12% 18%, rgba(255,255,255,0.9), transparent 60%),
-      radial-gradient(1.2px 1.2px at 28% 74%, rgba(125,211,252,0.85), transparent 60%),
-      radial-gradient(1px 1px at 46% 32%, rgba(255,255,255,0.8), transparent 60%),
-      radial-gradient(1.4px 1.4px at 63% 58%, rgba(168,140,255,0.9), transparent 60%),
-      radial-gradient(1px 1px at 81% 22%, rgba(255,255,255,0.8), transparent 60%),
-      radial-gradient(1px 1px at 95% 71%, rgba(255,255,255,0.85), transparent 60%),
-      radial-gradient(1px 1px at 8% 55%, rgba(255,255,255,0.75), transparent 60%),
-      radial-gradient(1px 1px at 34% 10%, rgba(255,255,255,0.8), transparent 60%),
-      radial-gradient(1.2px 1.2px at 55% 88%, rgba(125,211,252,0.7), transparent 60%),
-      radial-gradient(1px 1px at 72% 12%, rgba(168,140,255,0.8), transparent 60%),
-      radial-gradient(1px 1px at 19% 38%, rgba(255,255,255,0.6), transparent 60%),
-      radial-gradient(1px 1px at 89% 45%, rgba(255,255,255,0.7), transparent 60%);
-    background-size:420px 420px; background-repeat:repeat;
-    animation:twinkle 4s ease-in-out infinite;
+      radial-gradient(1px 1px at 12% 18%, rgba(255,255,255,0.7), transparent 60%),
+      radial-gradient(1.2px 1.2px at 28% 74%, rgba(125,211,252,0.65), transparent 60%),
+      radial-gradient(1px 1px at 46% 32%, rgba(255,255,255,0.6), transparent 60%),
+      radial-gradient(1.4px 1.4px at 63% 58%, rgba(168,140,255,0.7), transparent 60%),
+      radial-gradient(1px 1px at 81% 22%, rgba(255,255,255,0.6), transparent 60%),
+      radial-gradient(1px 1px at 95% 71%, rgba(255,255,255,0.65), transparent 60%),
+      radial-gradient(1px 1px at 8% 55%, rgba(255,255,255,0.55), transparent 60%),
+      radial-gradient(1px 1px at 34% 10%, rgba(255,255,255,0.6), transparent 60%);
+    background-size:520px 520px; background-repeat:repeat;
   }
-  .bg-stage .stars2::before{ background-size:620px 620px; opacity:0.7; animation-duration:6s; animation-delay:-2s; }
-  .bg-stage .stars { animation:drift-s 240s linear infinite; }
-  .bg-stage .stars2{ animation:drift-s 360s linear infinite reverse; }
-
-  /* Shooting stars (occasional diagonal streaks) */
-  .bg-stage .shooting{position:absolute; inset:0; overflow:hidden;}
-  .bg-stage .shooting span{position:absolute; top:-10%; width:2px; height:140px; background:linear-gradient(180deg, transparent, #a5f3fc, transparent); filter:blur(0.5px); opacity:0;
-    animation:shoot 9s linear infinite;}
-  .bg-stage .shooting span:nth-child(1){ left:18%; animation-delay:-3s; }
-  .bg-stage .shooting span:nth-child(2){ left:62%; animation-delay:-6s; background:linear-gradient(180deg, transparent, #e9d5ff, transparent); }
-  .bg-stage .shooting span:nth-child(3){ left:88%; animation-delay:-1.5s; }
-
-  .bg-stage .grain{position:absolute; inset:0; opacity:0.14; mix-blend-mode:overlay;
-    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");}
+  .bg-stage .stars2{display:none;}     /* second starfield layer killed for perf */
+  .bg-stage .shooting{display:none;}   /* shooting stars killed — they animated continuously off-screen */
+  .bg-stage .grain{display:none;}      /* SVG turbulence noise filter killed — it ran on every paint */
   .bg-stage .readable{position:absolute; inset:0;
     background:linear-gradient(180deg, rgba(2,3,10,0.4) 0%, transparent 25%, transparent 75%, rgba(2,3,10,0.6) 100%);}
   .bg-stage .vignette{position:absolute; inset:0;
     background:radial-gradient(ellipse at center, transparent 45%, rgba(2,3,10,0.85) 100%);}
 
-  @keyframes float1{0%,100%{transform:translate3d(0,0,0) scale(1);}50%{transform:translate3d(10%,8%,0) scale(1.12);}}
-  @keyframes float2{0%,100%{transform:translate3d(0,0,0) scale(1);}50%{transform:translate3d(-12%,5%,0) scale(1.1);}}
-  @keyframes float3{0%,100%{transform:translate3d(0,0,0) scale(1);}50%{transform:translate3d(8%,-10%,0) scale(1.15);}}
-  @keyframes float4{0%,100%{transform:translate3d(0,0,0) scale(1);}50%{transform:translate3d(-8%,-6%,0) scale(1.18);}}
-  @keyframes ribbon{0%,100%{transform:translateX(-4%) skewY(-2deg);}50%{transform:translateX(4%) skewY(2deg);}}
-  @keyframes twinkle{0%,100%{opacity:0.85;}50%{opacity:0.55;}}
-  @keyframes drift-s{from{transform:translate3d(0,0,0);}to{transform:translate3d(-420px,-420px,0);}}
-  @keyframes shoot{
-    0%{transform:translate(0,0) rotate(18deg); opacity:0;}
-    6%{opacity:0.9;}
-    14%{opacity:0;}
-    100%{transform:translate(-40vw,120vh) rotate(18deg); opacity:0;}
-  }
+  /* Removed unused @keyframes (float1-4, ribbon, twinkle, drift-s, shoot) — they kept GPU layers alive even when nothing referenced them */
 
   #root{position:relative; z-index:10;}
 
@@ -150,19 +112,14 @@
   }
   .bg-stage .graph svg{width:100%; height:100%; display:block;}
   .bg-stage .graph .card-fill{fill:#060a18;}
-  .bg-stage .graph .edge{fill:none; stroke-linecap:round; stroke-linejoin:round; stroke-width:1.8; stroke-dasharray:6 8;
-    filter:drop-shadow(0 0 6px currentColor);
-    animation:flow 24s linear infinite;}
-  .bg-stage .graph .edge.slow{animation-duration:32s;}
-  .bg-stage .graph .edge.rev{animation-direction:reverse;}
-  .bg-stage .graph .node-border{fill:none; stroke-width:1.6; filter:drop-shadow(0 0 8px currentColor);}
-  .bg-stage .graph .node-dot{filter:drop-shadow(0 0 6px currentColor);}
-  .bg-stage .graph .glyph{stroke-width:1.6; fill:none; stroke-linecap:round; stroke-linejoin:round; filter:drop-shadow(0 0 5px currentColor);}
-  @keyframes flow{to{stroke-dashoffset:-140;}}
+  /* Edges — STATIC (no flow animation). Drop-shadow is the most expensive part too — keep small. */
+  .bg-stage .graph .edge{fill:none; stroke-linecap:round; stroke-linejoin:round; stroke-width:1.8; stroke-dasharray:6 8;}
+  .bg-stage .graph .node-border{fill:none; stroke-width:1.6;}
+  .bg-stage .graph .node-dot{}
+  .bg-stage .graph .glyph{stroke-width:1.6; fill:none; stroke-linecap:round; stroke-linejoin:round;}
 
-  /* Pulsing node halos */
-  .bg-stage .graph .halo{ transform-origin:center; animation:halo 7s ease-in-out infinite; }
-  @keyframes halo{0%,100%{opacity:0.35;}50%{opacity:0.9;}}
+  /* Halos — static (was a 7s opacity pulse on every node, forcing constant repaint of large drop-shadowed areas) */
+  .bg-stage .graph .halo{ opacity:0.6; }
 
   /* Defer below-the-fold paint/layout */
   .cv-auto{ content-visibility:auto; contain-intrinsic-size:auto 800px; }
@@ -367,15 +324,8 @@
   <div class="vignette"></div>
 </div>
 
-<script>
-  (function(){
-    const spot = document.getElementById('spot');
-    window.addEventListener('pointermove', (e)=>{
-      spot.style.setProperty('--mx', e.clientX+'px');
-      spot.style.setProperty('--my', e.clientY+'px');
-    }, {passive:true});
-  })();
-</script>
+<!-- Removed cursor-following spotlight script — it triggered a full-screen repaint of two large radial gradients on every mouse move, which was the dominant lag source on Brave/Chromium. The spot is now a static gradient. -->
+
 
 <div id="root"></div>
 <script type="module" src="dist/bundle.js" defer></script>

@@ -101,6 +101,12 @@
   .pill.new{background:rgba(34,211,238,0.10); color:#67e8f9; border:1px solid rgba(34,211,238,0.25);} .pill.new .dot{background:#22d3ee; box-shadow:0 0 10px #22d3ee;}
   .pill.contacted{background:rgba(168,85,247,0.10); color:#d8b4fe; border:1px solid rgba(168,85,247,0.25);} .pill.contacted .dot{background:#a855f7; box-shadow:0 0 10px #a855f7;}
   .pill.archived{background:rgba(148,163,184,0.08); color:#94a3b8; border:1px solid rgba(148,163,184,0.18);} .pill.archived .dot{background:#94a3b8;}
+  .pill.pending,
+  .pill.pending-verification{background:rgba(234,179,8,0.10); color:#fde68a; border:1px solid rgba(234,179,8,0.28);}
+  .pill.pending .dot,
+  .pill.pending-verification .dot{background:#eab308; box-shadow:0 0 10px #eab308;}
+  .pill.verified{background:rgba(52,211,153,0.10); color:#6ee7b7; border:1px solid rgba(52,211,153,0.28);}
+  .pill.verified .dot{background:#34d399; box-shadow:0 0 10px #34d399;}
 
   /* Sidebar nav */
   .nav-item{display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:12px; color:#9aa3c0; font-weight:500; font-size:14px; transition:all .22s ease; cursor:pointer; border:1px solid transparent;}
@@ -222,6 +228,13 @@ const { useState, useEffect, useMemo, useRef, useCallback } = React;
      5. Credentials → + Create credentials → API key.
    ===================================================================== */
 const CONFIG = {
+  // GALTRIX Apps Script Sheet endpoint — primary source for leads now that
+  // the contact form goes through double-opt-in verification.
+  // Returns full status (pending / verified) per row.
+  // Set DASHBOARD_KEY to the same value you set as a Script Property in Apps Script.
+  APPS_SCRIPT_LIST_URL: "https://script.google.com/macros/s/AKfycby01wraZ1Bew0Af1OycbeqMrcmjsnrq4OgsqAyqyspaYTdE9zF-a8AYMe2ArUihiguA/exec",
+  DASHBOARD_KEY:        "",   // ⬅️ paste here
+
   // Formspree: read by the Azure Function — keep the form id here too,
   // it's fine to be public (it's in your existing contact form).
   FORMSPREE_FORM_ID: "xykljbzj",
@@ -331,6 +344,49 @@ function buildMockGmail(leads){
     unread: l.status === "new",
     linkedLeadId: l.id,
   }));
+}
+
+/* ================= Apps Script Sheet connector ====================
+   Reads inquiries straight from the GALTRIX Inquiries sheet via the
+   Apps Script web app. Returns leads with their real status:
+     - "pending"  — submitter hasn't verified email yet
+     - "verified" — submitter clicked the verification link
+     - "contacted" / "archived" — admin actions made later
+   This is the PRIMARY lead source. Falls back to Gmail/Formspree/mock
+   if not configured or unreachable.
+=================================================================== */
+async function fetchSheetLeads(){
+  if (!CONFIG.APPS_SCRIPT_LIST_URL || !CONFIG.DASHBOARD_KEY) return null;
+  try {
+    const url = CONFIG.APPS_SCRIPT_LIST_URL
+              + "?action=list&key=" + encodeURIComponent(CONFIG.DASHBOARD_KEY)
+              + "&_=" + Date.now();   // bust browser cache between polls
+    const r = await fetch(url, { headers: { "Accept":"application/json" } });
+    if (!r.ok) throw new Error("sheet http " + r.status);
+    const j = await r.json();
+    if (!j.ok) {
+      console.warn("[Sheet]", j.error || j.message);
+      return null;
+    }
+    return (j.leads || []).map(row => ({
+      id:          String(row.id || mkId()),
+      name:        row.name  || "—",
+      email:       row.email || "—",
+      message:     row.message || "",
+      source:      row.source || "Galtrix Website Contact Form",
+      submittedAt: row.submittedAt || new Date().toISOString(),
+      status:      row.status || "pending",
+      verifiedAt:  row.verifiedAt || null,
+      history: [
+        { t: "submitted", at: row.submittedAt || new Date().toISOString() },
+        ...(row.verifiedAt ? [{ t: "verified", at: row.verifiedAt }] : []),
+      ],
+      _sheetRow: true,
+    }));
+  } catch(e){
+    console.warn("[Sheet] fetch failed:", e.message);
+    return null;
+  }
 }
 
 /* ================= Formspree connector =================
@@ -746,6 +802,7 @@ function Sidebar({ view, setView, counts, sources }){
               label="Leads source"
               state={sources?.formspree || "mock"}
               hint={
+                sources?.formspree === "sheet"     ? "Apps Script · sheet" :
                 sources?.formspree === "gmail"     ? "via Gmail inbox" :
                 sources?.formspree === "formspree" ? ("/f/"+(CONFIG.FORMSPREE_FORM_ID||"?")) :
                 "mock data"
@@ -771,12 +828,17 @@ function Sidebar({ view, setView, counts, sources }){
   );
 }
 function IntegrationPill({ label, state = "mock", hint }){
-  const live = state === "live" || state === "gmail" || state === "formspree";
+  const live = state === "live" || state === "gmail" || state === "formspree" || state === "sheet";
   const color = !live                 ? "#fbbf24"   // amber — mock
+              : state === "sheet"     ? "#34d399"   // green — sheet (primary, full status)
               : state === "gmail"     ? "#22d3ee"   // cyan  — gmail path
               : state === "formspree" ? "#a855f7"   // purple — formspree api
               :                          "#34d399"; // green — generic live
-  const tag = !live ? "mock" : state === "gmail" ? "gmail" : state === "formspree" ? "api" : "live";
+  const tag = !live ? "mock"
+            : state === "sheet" ? "sheet"
+            : state === "gmail" ? "gmail"
+            : state === "formspree" ? "api"
+            : "live";
   return (
     <div className="flex items-center justify-between text-[12px]">
       <div className="flex items-center gap-2">
@@ -883,7 +945,11 @@ function KpiCard({ label, value, delta, accent="cyan", points=[] }){
 function LeadsTable({ leads, filter, setFilter, query, selectedId, onSelect, onAction, counts }){
   const filtered = useMemo(()=>{
     let rows = leads;
-    if (filter !== "all") rows = rows.filter(l => l.status === filter);
+    if (filter === "pending") {
+      rows = rows.filter(l => l.status === "pending" || l.status === "pending-verification");
+    } else if (filter !== "all") {
+      rows = rows.filter(l => l.status === filter);
+    }
     const q = query.trim().toLowerCase();
     if (q) rows = rows.filter(l => l.name.toLowerCase().includes(q) || l.email.toLowerCase().includes(q) || l.message.toLowerCase().includes(q));
     return rows;
@@ -899,6 +965,8 @@ function LeadsTable({ leads, filter, setFilter, query, selectedId, onSelect, onA
         <div className="flex-1"/>
         <div className="seg">
           <button className={filter==="all"?"on":""}        onClick={()=>setFilter("all")}>All <span className="n">{counts.all}</span></button>
+          <button className={filter==="pending"?"on":""}    onClick={()=>setFilter("pending")}>Pending <span className="n">{counts.pending}</span></button>
+          <button className={filter==="verified"?"on":""}   onClick={()=>setFilter("verified")}>Verified <span className="n">{counts.verified}</span></button>
           <button className={filter==="new"?"on":""}        onClick={()=>setFilter("new")}>New <span className="n">{counts.new}</span></button>
           <button className={filter==="contacted"?"on":""}  onClick={()=>setFilter("contacted")}>Contacted <span className="n">{counts.contacted}</span></button>
           <button className={filter==="archived"?"on":""}   onClick={()=>setFilter("archived")}>Archived <span className="n">{counts.archived}</span></button>
@@ -1236,11 +1304,14 @@ function App(){
     setRefreshing(true);
 
     // Lead source priority:
-    //   1. Gmail (parses Formspree notification emails directly — works on any plan)
-    //   2. Formspree Submissions API proxy (paid plan, if FORMSPREE_PAT set in SWA)
-    //   3. Mock data
+    //   1. Apps Script Sheet (primary — has pending+verified statuses)
+    //   2. Gmail (parses Formspree notification emails directly)
+    //   3. Formspree Submissions API proxy (paid plan, via Azure Function)
+    //   4. Mock data
     let baseLeads = null, leadsSource = "mock";
-    if (Gmail.accessToken) {
+    const sheet = await fetchSheetLeads();
+    if (sheet) { baseLeads = sheet; leadsSource = "sheet"; }
+    if (!baseLeads && Gmail.accessToken) {
       try { baseLeads = await Gmail.fetchLeads(); if (baseLeads) leadsSource = "gmail"; }
       catch(e){ console.warn("[Gmail leads] failed:", e); }
     }
@@ -1358,6 +1429,8 @@ function App(){
 
   const counts = useMemo(()=>({
     all:       leads.length,
+    pending:   leads.filter(l=>l.status==="pending" || l.status==="pending-verification").length,
+    verified:  leads.filter(l=>l.status==="verified").length,
     new:       leads.filter(l=>l.status==="new").length,
     contacted: leads.filter(l=>l.status==="contacted").length,
     archived:  leads.filter(l=>l.status==="archived").length,
@@ -1402,8 +1475,9 @@ function App(){
   };
 
   const leadSourceLabel =
-    sources.formspree === "gmail"     ? "LIVE · GMAIL (FORMSPREE EMAILS)" :
-    sources.formspree === "formspree" ? "LIVE · FORMSPREE API"            :
+    sources.formspree === "sheet"     ? "LIVE · APPS SCRIPT (PENDING + VERIFIED)" :
+    sources.formspree === "gmail"     ? "LIVE · GMAIL (FORMSPREE EMAILS)"         :
+    sources.formspree === "formspree" ? "LIVE · FORMSPREE API"                    :
     "MOCK · LEADS";
   const liveLabel = `${leadSourceLabel}  /  ${sources.gmail.toUpperCase()} · INBOX`;
 

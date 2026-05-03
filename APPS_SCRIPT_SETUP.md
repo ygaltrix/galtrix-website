@@ -1,187 +1,260 @@
-# GALTRIX — Gmail Confirmation Email Setup
+# GALTRIX — Inquiry Verification Setup (Apps Script + Google Sheet)
 
-This adds **automatic Gmail confirmation emails** to clients who submit the
-website inquiry form. Your existing Formspree inquiry notification and
-Telegram notification are **not touched** — this runs in parallel.
+This sets up **double-opt-in email verification** for the website contact
+form. Bots and typo emails never reach your inbox or Telegram — only people
+who can actually receive email at the address they typed will produce a real
+inquiry.
 
-The flow once set up:
+## How the flow works
 
 ```
-Client submits inquiry on website
-   ├─► Formspree         → existing internal inquiry email + Telegram alert
-   └─► Apps Script (new) → confirmation email to client + backup internal email
-                           sent via your Gmail / Google Workspace
+1. User submits inquiry on the website
+   └─► Apps Script writes a "pending" row to a Google Sheet
+       and sends a verification email with a one-time link (24h TTL)
+       (No Telegram alert, no admin email yet.)
+
+2. User clicks the link in their inbox
+   └─► Apps Script verifies the token, marks the row "verified",
+       and only THEN forwards the inquiry to Formspree
+       (which fires Telegram + your admin Gmail like before)
+
+3. The admin dashboard reads the Sheet directly
+   └─► Pending rows show a yellow badge, verified rows show a green one
 ```
 
-The Apps Script uses Google's built-in OAuth — you never paste your Gmail
-password anywhere, and no credentials are stored in the website code.
+Existing Formspree → Telegram → admin Gmail wiring is unchanged. The Apps
+Script just becomes the gate that decides *when* Formspree fires.
 
 ---
 
-## One-time setup (≈ 5 minutes)
+## One-time setup (≈ 10 minutes)
 
-### Step 1 — Open Apps Script
+### Step 1 — Create the Inquiries Sheet
 
-Go to **<https://script.google.com>** while signed in as
-**galtrix.info@galtrix.net** (or whichever Google Workspace account you want
-the confirmation emails to be sent from).
+1. Open <https://sheets.new> while signed in as your Galtrix Google account.
+2. Rename the spreadsheet to **`GALTRIX — Inquiries`**.
+3. Rename the first tab to **`Inquiries`** (double-click `Sheet1` at the bottom).
+4. In **row 1**, paste these headers (one per cell, columns A → J):
 
-### Step 2 — Create a new project
+   ```
+   id    submittedAt    status    name    email    company    message    source    token    verifiedAt
+   ```
+
+5. Copy the **Sheet ID** from the URL — it's the long string between
+   `/spreadsheets/d/` and `/edit`. You'll need it in Step 6.
+
+### Step 2 — Open Apps Script
+
+Go to <https://script.google.com> while signed in as the Galtrix account
+that should send the verification emails.
+
+### Step 3 — Create a new project
 
 Click **➕ New project** in the top-left.
-You'll see a starter file called `Code.gs`.
 
-### Step 3 — Paste the backend code
+### Step 4 — Paste the backend code
 
 1. Open [`apps-script/galtrix-confirmation.gs`](apps-script/galtrix-confirmation.gs) from this repo.
 2. Copy the **entire file**.
-3. In the Apps Script editor, **delete everything** in `Code.gs` and paste
-   the contents in.
+3. In the Apps Script editor, **delete everything** in `Code.gs` and paste the contents in.
+4. Click 💾 **Save** (or `Cmd/Ctrl + S`). Name the project **GALTRIX Inquiry Verification**.
 
-### Step 4 — Save
+### Step 5 — Generate a dashboard read-key
 
-Click the 💾 **Save project** icon (or `Cmd/Ctrl + S`). Give the project a
-name like **"GALTRIX Confirmation Email"** when prompted.
+The dashboard uses this key to fetch the leads list. Generate any random
+string — easiest way: open your browser DevTools console anywhere and run:
 
-### Step 5 — Deploy as a Web App
+```js
+crypto.randomUUID().replace(/-/g,'')
+```
+
+Save it in a note — you'll paste it into both Apps Script (Step 6) and the
+dashboard (Step 11).
+
+### Step 6 — Set Script Properties
+
+In the Apps Script editor:
+
+1. Click ⚙ **Project Settings** (left sidebar, near the bottom).
+2. Scroll to **Script Properties** → **Add script property**.
+3. Add four properties:
+
+   | Property name | Value |
+   |---|---|
+   | `SHEET_ID` | the Sheet ID you copied in Step 1 |
+   | `FORMSPREE_URL` | `https://formspree.io/f/xykljbzj` |
+   | `DASHBOARD_KEY` | the random string from Step 5 |
+   | `SITE_BASE_URL` | `https://brave-cliff-02c1d5a10.7.azurestaticapps.net` (or your custom domain) |
+
+4. Click **Save script properties**.
+
+### Step 7 — Deploy as a Web App
 
 1. Click **Deploy** (top-right) → **New deployment**.
-2. Click the ⚙️ gear next to "Select type" → choose **Web app**.
+2. Click ⚙ next to **Select type** → **Web app**.
+3. Fill in:
 
-### Step 6 — Configure execution
+   | Field | Value |
+   |---|---|
+   | Description | `GALTRIX inquiry verification v1` |
+   | Execute as | **Me** *(verification emails will send from your Galtrix account)* |
+   | Who has access | **Anyone** *(must be Anyone — the website is public)* |
 
-In the deployment dialog, set:
+4. Click **Deploy**.
 
-| Field | Value |
-|---|---|
-| Description | `GALTRIX confirmation email v1` |
-| Execute as | **Me** *(your Galtrix Google account — emails will send from here)* |
-| Who has access | **Anyone** *(must be Anyone — the website is public and posts unauthenticated)* |
+### Step 8 — Authorize Gmail + Sheets
 
-### Step 7 — Authorize Gmail
-
-Click **Deploy**. Google will pop up an OAuth flow:
+Google will pop up an OAuth flow:
 
 1. Choose your Galtrix account.
-2. You'll see *"Google hasn't verified this app"* — click **Advanced** →
-   **Go to GALTRIX Confirmation Email (unsafe)**. This is normal for your
-   own scripts; the warning exists because you (the developer) haven't
-   submitted it for Google's verification process, which isn't needed for
-   private use.
-3. Click **Allow** to grant Gmail send permission.
+2. *"Google hasn't verified this app"* → **Advanced** → **Go to GALTRIX
+   Inquiry Verification (unsafe)**. (Normal for your own scripts.)
+3. Click **Allow** to grant Gmail + Sheets permissions.
 
-### Step 8 — Copy the Web App URL
+### Step 9 — Copy the Web App URL
 
-After deployment finishes, you'll get a URL like:
+After deployment finishes, copy the URL — it looks like:
 
 ```
 https://script.google.com/macros/s/AKfycb…long-id…/exec
 ```
 
-Click **Copy**.
+### Step 10 — Confirm the URL in the website code
 
-### Step 9 — Paste it into the website
-
-In this repo, open **`src/app.jsx`** and find this line:
+Open [`src/app.jsx`](src/app.jsx), find the line:
 
 ```js
-const APPS_SCRIPT_URL = 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/.../exec';
 ```
 
-Replace the placeholder with the URL you just copied:
+If it's different from Step 9, update it.
+
+### Step 11 — Paste the URL + key into the dashboard
+
+Open [`dashboard.html`](dashboard.html) and find the `CONFIG` block near the
+top of the `<script>`:
 
 ```js
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycb…/exec';
+APPS_SCRIPT_LIST_URL: "https://script.google.com/macros/s/.../exec",
+DASHBOARD_KEY:        "",   // ⬅️ paste here
 ```
 
-### Step 10 — Rebuild and deploy
+- Make sure `APPS_SCRIPT_LIST_URL` matches Step 9.
+- Paste your random key from Step 5 into `DASHBOARD_KEY`.
+
+### Step 12 — Build and deploy
 
 ```bash
-# Locally:
-bun run build:bun     # or: npm run build  (Azure runs this on push too)
-git add src/app.jsx
-git commit -m "Wire Gmail confirmation Apps Script URL"
-git push origin main
+npm install     # first time only
+npm run build
+git add -A
+git commit -m "Configure inquiry verification flow"
+git push
 ```
 
-Azure SWA picks up the push and redeploys automatically (~2 min).
-
-### Step 11 — Test
-
-1. Open <https://www.galtrixtech.com> in a private/incognito window.
-2. Submit the contact form using a **real email address you can check**.
-3. Within 5–30 seconds you should receive **the confirmation email** in
-   that inbox.
-4. You should also receive **two** internal notifications:
-   - The existing Formspree email (with Telegram alert) — unchanged
-   - The new Apps Script backup email at `galtrix.info@galtrix.net` (with
-     `Reply-To` set to the client's address — handy for replying)
-
-If the confirmation email doesn't arrive within a minute, see
-**Troubleshooting** below.
+Azure SWA redeploys automatically (~90 s).
 
 ---
 
-## Updating the Apps Script later
+## Re-deploying the Apps Script after edits
 
-If you change the email copy in `apps-script/galtrix-confirmation.gs`:
+**Every time you edit the script** you must re-deploy or your changes won't
+take effect:
 
-1. Paste the updated code into the Apps Script editor.
-2. Save.
-3. **Deploy → Manage deployments → ✏️ Edit (pencil icon) → New version → Deploy.**
-4. The URL stays the same — no website rebuild needed.
+1. **Deploy → Manage deployments** (top-right).
+2. Click ✏ on your active deployment.
+3. **Version → New version** → click **Deploy**.
 
-> ⚠️ Don't click "New deployment" again — that would create a *second* URL
-> and you'd have to update the website. Always edit the existing deployment
-> to keep the URL stable.
+This keeps the same `/exec` URL — no need to update the website.
 
 ---
 
-## Daily quotas
+## End-to-end test
 
-Apps Script's `GmailApp.sendEmail` quota for a Google Workspace account is
-**1,500 outbound recipients per day** (consumer Gmail is 100/day). Your
-inquiry volume is nowhere near this — you're safe.
+1. Open your live site in a browser, scroll to the contact form.
+2. Submit with a real email you control (e.g. your personal Gmail).
+3. The form should switch to:
+   *"One last step — confirm your email. We just sent a confirmation link
+   to **you@example.com**…"*.
+4. Open your inbox — the verification email should arrive within seconds
+   (subject: *"Confirm your email — your inquiry to GALTRIX"*).
+5. **Don't click yet.** Open the admin dashboard, hard-refresh
+   (`Ctrl + Shift + R`). You should see your inquiry with a yellow
+   **pending** pill. No Telegram alert has fired.
+6. Click the **Confirm my email →** button in the email. A themed page
+   opens: *"Your email is verified."*.
+7. Within ~30 seconds:
+   - Telegram pings,
+   - your admin Gmail receives the Formspree notification,
+   - the dashboard auto-refresh upgrades the row to a green **verified** pill.
+8. Click the same link again → idempotent *"Already verified"* page.
+9. To test expiry: in the Sheet, manually set the `submittedAt` of a pending
+   row to a date >24h ago, then click that row's link → *"Link expired"* page.
+10. To test the disposable blocklist: try submitting with `foo@mailinator.com` —
+    the form should refuse it before even sending.
 
 ---
 
 ## Troubleshooting
 
-**Form submits but no confirmation email arrives.**
+**Form shows "We couldn't submit your inquiry."**
 
-1. Open the Apps Script editor → left sidebar → **Executions**.
-2. Look at the most recent `doPost` run. If it's red, click it for the error.
-3. Common causes:
-   - Deployment is "Execute as: User accessing the web app" → change to
-     **Me** and redeploy.
-   - "Who has access" is restricted → change to **Anyone** and redeploy.
-   - Gmail permission was never granted → re-run the OAuth flow.
+The Apps Script returned `ok: false` or the request failed.
+- Visit the `/exec` URL directly in a browser — should show a JSON
+  health-check `{"ok":true,…}`.
+- If it shows an error, check the Apps Script editor → **Executions** to
+  see the stack trace.
+- Common causes: `SHEET_ID` script property missing, headers in row 1 of
+  the sheet are misspelled, Apps Script not re-deployed after an edit.
 
-**`'sent-no-email'` shown on the website success screen.**
+**Verification email never arrives.**
 
-This means the request to Apps Script failed at the network layer (Apps
-Script down, URL typo, or your network blocked it). The inquiry itself was
-recorded by Formspree, so nothing's lost — re-test the URL in a browser
-(visit it directly: it should respond with a JSON `{"ok":true,…}`).
+- Check the user's spam folder.
+- Apps Script editor → **Executions** → look for `sendVerificationEmail`
+  failures.
+- Gmail per-day send quota: 100/day on free, 1,500/day on Workspace.
 
-**`'error'` shown on the website success screen.**
+**Dashboard shows mock data.**
 
-Formspree itself failed. This is unrelated to the Gmail integration — check
-your Formspree dashboard.
+- Open DevTools → Console. Look for `[Sheet] fetch failed:` or
+  `[Sheet] unauthorized` lines.
+- Most likely: `DASHBOARD_KEY` mismatch between Apps Script properties and
+  `dashboard.html`. They must be byte-identical.
+- Or: visiting `…/exec?action=list&key=YOURKEY` in the browser doesn't
+  return JSON — re-deploy the script.
+
+**Verification page says "Link expired".**
+
+The token is older than 24 hours. The user must submit again to get a
+fresh link. To change the TTL, edit `TOKEN_TTL_MS` near the top of the
+Apps Script and re-deploy.
+
+**Telegram alerts stopped firing for some inquiries.**
+
+By design — Telegram now fires only when an inquiry is *verified*. If a
+real client never clicks the link you won't hear about it. Watch the
+dashboard's **pending** filter for unconfirmed leads, and reach out
+manually if needed.
 
 ---
 
 ## What this added to the repo
 
-- `apps-script/galtrix-confirmation.gs` — the backend code to paste into
-  Apps Script
-- `APPS_SCRIPT_SETUP.md` — this file
-- Updated `src/app.jsx`:
-  - Added an optional **Company** field to the contact form
-  - Stronger client-side validation (name, email format, message)
-  - Submits to **both** Formspree (existing) and Apps Script (new) in
-    parallel via `Promise.allSettled`
-  - New success copy mentioning the confirmation email
-  - Distinct error states: `'sent'`, `'sent-no-email'`, `'error'`
+| File | Purpose |
+|---|---|
+| `apps-script/galtrix-confirmation.gs` | Apps Script backend: Sheet I/O, token gen, verification flow, themed HTML pages, dashboard list endpoint |
+| `APPS_SCRIPT_SETUP.md` | This file |
+| `src/app.jsx` | Contact form: tighter email validation (length, double-dot, disposable-domain blocklist), single POST to Apps Script, *"check your inbox"* success state |
+| `dashboard.html` | Reads leads from the Apps Script Sheet endpoint as the primary source. New **pending** + **verified** status pills. New filter buttons. |
 
-Nothing else (Telegram, design, animations, layout) was modified.
+---
+
+## Disposable-domain blocklist
+
+Inputs from disposable mailboxes (mailinator, 10minutemail, yopmail, etc.)
+are rejected on both the frontend **and** the server. The list lives in:
+
+- `DISPOSABLE_DOMAINS` array near the top of [`apps-script/galtrix-confirmation.gs`](apps-script/galtrix-confirmation.gs)
+- `DISPOSABLE_DOMAINS` Set near the top of [`src/app.jsx`](src/app.jsx)
+
+Keep them in sync. Add domains as you encounter abuse.

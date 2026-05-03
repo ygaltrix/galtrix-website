@@ -406,33 +406,59 @@ function Founders(){
 }
 
 // ───────────────────────────────────────────────────────────────────────────
-// Inquiry endpoints
+// Inquiry endpoint
 // ───────────────────────────────────────────────────────────────────────────
-// Formspree handles the internal inquiry notification + Telegram webhook
-// (configured on Formspree's side). Do not change this URL or the Telegram
-// integration breaks.
-const FORMSPREE_URL = 'https://formspree.io/f/xykljbzj';
-
-// Google Apps Script Web App URL — sends the client confirmation email and
-// an internal notification via Gmail. See APPS_SCRIPT_SETUP.md and
-// apps-script/galtrix-confirmation.gs in the repo for setup steps.
-// Replace the placeholder below with the deployed Web App URL after step 9
-// of the setup guide.
+// All inquiries go through the GALTRIX Apps Script. The script:
+//   1. Stores the inquiry as "pending" in a Google Sheet
+//   2. Sends a verification email to the submitter (24h TTL)
+//   3. Once the link is clicked, marks the row "verified" AND fires Formspree
+//      server-side (which still runs the Telegram + admin Gmail flow)
+//
+// See APPS_SCRIPT_SETUP.md for the script properties (SHEET_ID, FORMSPREE_URL,
+// DASHBOARD_KEY, SITE_BASE_URL) that need to be set on the Apps Script side.
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby01wraZ1Bew0Af1OycbeqMrcmjsnrq4OgsqAyqyspaYTdE9zF-a8AYMe2ArUihiguA/exec';
 
-const APPS_SCRIPT_CONFIGURED = !APPS_SCRIPT_URL.startsWith('YOUR_');
+// Mirror of the Apps Script's disposable-domain blocklist so we can fail
+// fast on the frontend. Keep this list in sync with DISPOSABLE_DOMAINS in
+// apps-script/galtrix-confirmation.gs.
+const DISPOSABLE_DOMAINS = new Set([
+  'mailinator.com','guerrillamail.com','tempmail.com','tempmail.net',
+  'temp-mail.org','10minutemail.com','10minutemail.net','yopmail.com',
+  'throwawaymail.com','getairmail.com','sharklasers.com','maildrop.cc',
+  'trashmail.com','fakeinbox.com','mintemail.com','mohmal.com',
+]);
 
-const isValidEmail = (s)=> /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s).trim());
+// Returns null if the email is acceptable, or a user-facing error string.
+function emailValidationError(raw){
+  const s = String(raw || '').trim();
+  if (!s) return 'Please enter your email.';
+  if (s.length > 254) return 'That email is too long.';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)) return 'That email address looks invalid.';
+  const [local, domain] = s.split('@');
+  if (local.length > 64) return 'The part before "@" is too long.';
+  if (domain.indexOf('..') !== -1) return 'That domain looks invalid (consecutive dots).';
+  if (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(domain)) return 'That domain looks invalid.';
+  const dom = domain.toLowerCase();
+  for (const d of DISPOSABLE_DOMAINS) {
+    if (dom === d || dom.endsWith('.' + d)) {
+      return 'Please use a permanent email address — disposable inboxes are not accepted.';
+    }
+  }
+  return null;
+}
+const isValidEmail = (s) => emailValidationError(s) === null;
 
 function Contact(){
   const [form, setForm] = useState({ fullName:'', email:'', company:'', project:'' });
   // statuses:
   //   'idle' | 'sending'
-  //   'sent'             — both Formspree + Apps Script appear successful
-  //   'sent-no-email'    — Formspree ok, but Apps Script call failed at network layer
-  //   'error'            — Formspree failed (inquiry notification didn't go through)
+  //   'pending'  — Apps Script accepted the inquiry, verification email sent
+  //   'error'    — server returned ok:false, or the request itself failed
   const [status, setStatus] = useState('idle');
   const [validationError, setValidationError] = useState('');
+  const [serverMessage, setServerMessage] = useState('');
+  const [verifyEmail, setVerifyEmail] = useState('');
+
   const onChange = (k)=>(e)=>{
     setForm(f=>({...f,[k]:e.target.value}));
     if (validationError) setValidationError('');
@@ -440,8 +466,8 @@ function Contact(){
 
   const validate = ()=>{
     if (!form.fullName.trim()) return 'Please enter your name.';
-    if (!form.email.trim()) return 'Please enter your email.';
-    if (!isValidEmail(form.email)) return 'Please enter a valid email address.';
+    const emailErr = emailValidationError(form.email);
+    if (emailErr) return emailErr;
     if (!form.project.trim()) return 'Please tell us about your project.';
     return '';
   };
@@ -451,51 +477,46 @@ function Contact(){
     const err = validate();
     if (err) { setValidationError(err); return; }
     setValidationError('');
+    setServerMessage('');
     setStatus('sending');
 
-    // (1) Formspree submission — keeps existing inquiry + Telegram flow alive
-    const formspreeData = new FormData();
-    formspreeData.append('fullName', form.fullName);
-    formspreeData.append('email',    form.email);
-    formspreeData.append('company',  form.company);
-    formspreeData.append('project',  form.project);
-    formspreeData.append('source',   'Galtrix Website Contact Form');
+    // Send to the GALTRIX Apps Script. Using text/plain avoids the CORS
+    // preflight that Apps Script Web Apps don't handle, while still letting
+    // us READ the JSON response (which 'no-cors' would block).
+    try {
+      const res = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        body:   JSON.stringify({
+          name:    form.fullName.trim(),
+          email:   form.email.trim(),
+          company: form.company.trim(),
+          message: form.project.trim(),
+          source:  'Galtrix Website Contact Form',
+        }),
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        redirect: 'follow',
+      });
+      let json = null;
+      try { json = await res.json(); } catch (_) { /* non-JSON */ }
+      if (res.ok && json && json.ok) {
+        setVerifyEmail(form.email.trim());
+        setStatus('pending');
+      } else {
+        setServerMessage((json && json.error) || 'We couldn\u2019t submit your inquiry. Please try again or email galtrix.info@galtrix.net.');
+        setStatus('error');
+      }
+    } catch (netErr) {
+      setServerMessage('Network error. Please check your connection and try again.');
+      setStatus('error');
+    }
+  };
 
-    const formspreeReq = fetch(FORMSPREE_URL, {
-      method: 'POST',
-      body:    formspreeData,
-      headers: { 'Accept': 'application/json' },
-    }).then(r => r.ok);
-
-    // (2) Apps Script submission — sends Gmail confirmation to the client.
-    // Uses no-cors + text/plain so we avoid Apps Script's CORS preflight
-    // limitations. The response is opaque, so we treat any non-throw as ok.
-    const appsScriptReq = APPS_SCRIPT_CONFIGURED
-      ? fetch(APPS_SCRIPT_URL, {
-          method: 'POST',
-          mode:   'no-cors',
-          body:   JSON.stringify({
-            name:    form.fullName,
-            email:   form.email,
-            company: form.company,
-            message: form.project,
-            source:  'Galtrix Website Contact Form',
-          }),
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        }).then(()=>true).catch(()=>false)
-      : Promise.resolve(false); // no-op if URL not yet configured
-
-    const [formspreeRes, appsScriptRes] = await Promise.allSettled([formspreeReq, appsScriptReq]);
-    const formspreeOk  = formspreeRes.status === 'fulfilled' && formspreeRes.value === true;
-    const appsScriptOk = appsScriptRes.status === 'fulfilled' && appsScriptRes.value === true;
-
-    // 'sent' only when the confirmation email was actually dispatched (URL
-    // configured AND the network call to Apps Script didn't throw). Any other
-    // outcome where Formspree succeeded falls back to 'sent-no-email' so the
-    // success copy doesn't falsely claim a confirmation email was delivered.
-    if (formspreeOk && appsScriptOk)  setStatus('sent');
-    else if (formspreeOk)             setStatus('sent-no-email');
-    else                              setStatus('error');
+  const reset = ()=>{
+    setStatus('idle');
+    setForm({fullName:'',email:'',company:'',project:''});
+    setVerifyEmail('');
+    setServerMessage('');
+    setValidationError('');
   };
 
   const inputBase = "w-full rounded-2xl border bg-[#04050d]/60 px-4 py-3.5 text-sm text-white outline-none placeholder:text-white/30 transition focus:bg-[#04050d]/90";
@@ -526,36 +547,37 @@ function Contact(){
 
         <Reveal delay={140}>
           <form
-            action="https://formspree.io/f/xykljbzj"
-            method="POST"
             onSubmit={submit}
+            noValidate
             className="relative overflow-hidden rounded-[32px] border border-cyan-300/20 bg-[#06081a]/80 p-7 backdrop-blur-md glow-cyan">
             <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-cyan-400/15 blur-3xl"/>
             <div aria-hidden className="pointer-events-none absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-purple-400/15 blur-3xl"/>
 
             <input type="hidden" name="source" value="Galtrix Website Contact Form" />
 
-            {(status === 'sent' || status === 'sent-no-email') ? (
+            {status === 'pending' ? (
               <div className="relative flex flex-col items-center justify-center gap-4 py-12 text-center">
                 <div className="grid h-16 w-16 place-items-center rounded-full border border-cyan-300/40 bg-cyan-300/10 glow-cyan">
-                  <I.check className="h-8 w-8 text-cyan-200"/>
+                  {/* mail-open icon */}
+                  <svg viewBox="0 0 24 24" className="h-8 w-8 text-cyan-200" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 9.5L12 4l9 5.5"/>
+                    <path d="M3 9.5V19a2 2 0 002 2h14a2 2 0 002-2V9.5"/>
+                    <path d="M3 9.5l9 7 9-7"/>
+                  </svg>
                 </div>
-                <div className="text-xl font-semibold text-white">Thank you. Your inquiry has been received.</div>
+                <div className="text-xl font-semibold text-white">One last step — confirm your email.</div>
                 <p className="max-w-md text-[14px] leading-7 text-white/70">
-                  GALTRIX has received your message successfully.
-                  {status === 'sent' && ' A confirmation email has been sent to your inbox, and our team will review your inquiry shortly.'}
-                  {status === 'sent-no-email' && ' Our team will review your inquiry shortly.'}
+                  We just sent a confirmation link to{' '}
+                  <span className="font-semibold text-cyan-200 break-all">{verifyEmail}</span>.
+                  Click it to complete your inquiry — our team will then review and follow up within 24&ndash;48 hours.
                 </p>
-                {status === 'sent-no-email' && APPS_SCRIPT_CONFIGURED && (
-                  <p className="max-w-md text-[12px] leading-6 text-amber-200/80">
-                    Note: we couldn&apos;t deliver the automatic confirmation email to your inbox right now,
-                    but your inquiry has been recorded and we&apos;ll be in touch.
-                  </p>
-                )}
-                <button type="button"
-                  onClick={()=>{setStatus('idle'); setForm({fullName:'',email:'',company:'',project:''});}}
+                <p className="max-w-md text-[12px] leading-6 text-white/45">
+                  The link expires in 24 hours. Don&rsquo;t see it? Check your spam folder, or{' '}
+                  <button type="button" onClick={reset} className="text-cyan-300 underline-offset-2 hover:underline">try a different email</button>.
+                </p>
+                <button type="button" onClick={reset}
                   className="mt-4 rounded-full border border-white/15 px-5 py-2 text-sm text-white/80 transition hover:border-white/30 hover:text-white">
-                  Send another
+                  Send another inquiry
                 </button>
               </div>
             ) : (
@@ -611,7 +633,7 @@ function Contact(){
                 )}
                 {status === 'error' && (
                   <p className="text-center text-[13px] text-red-300/90">
-                    Inquiry notification could not be completed. Please try again or email us directly at galtrix.info@galtrix.net.
+                    {serverMessage || 'We couldn\u2019t submit your inquiry. Please try again or email galtrix.info@galtrix.net.'}
                   </p>
                 )}
                 <p className="text-center text-[11px] uppercase tracking-[0.25em] text-white/35">

@@ -34,24 +34,25 @@ function Reveal({ children, delay=0, className="" }){
 }
 
 function Logo({ compact = false }){
-  // User's Procreate-designed logo (galtrix-logo-new.png — 3508x2480, RGBA).
-  // The image already includes the icon + "GALTRIX" wordmark + tagline, so we
-  // only need to display it at a sensible height; width follows aspect ratio.
-  // Aspect ratio of source: 3508/2480 ≈ 1.41 (wider than tall — wordmark to the right of icon).
-  const h = compact ? 64 : 80;
-  const w = Math.round(h * (3508/2480));
+  // Icon-only logo (cropped from galtrix-logo-new.png → galtrix-icon.png).
+  // No wordmark or tagline — just the cloud-G mark, like Apple / X / Linear.
+  // Source dimensions: 1515x1595, aspect ratio ≈ 0.95 (almost square).
+  const h = compact ? 56 : 72;
+  const w = Math.round(h * (1515/1595));
   const loadHint = compact ? 'lazy' : 'eager';
   const decodeHint = compact ? 'async' : 'auto';
   const fetchHint = compact ? 'low' : 'high';
   return (
-    <a href="#home" className="group flex items-center" aria-label="GALTRIX — Built for what's next">
-      <img src="galtrix-logo-new.png" alt="GALTRIX — Built for what's next"
+    <a href="#home" className="group flex items-center" aria-label="GALTRIX">
+      <img src="galtrix-icon.png" alt="GALTRIX"
            width={w} height={h}
            loading={loadHint} decoding={decodeHint} fetchpriority={fetchHint}
            style={{
-             display:'block', height: h, width: 'auto', maxWidth: w,
-             filter:'drop-shadow(0 0 16px rgba(34,211,238,0.35)) drop-shadow(0 0 26px rgba(168,85,247,0.28))',
-           }}/>
+             display:'block', height: h, width: w,
+             filter:'drop-shadow(0 0 14px rgba(34,211,238,0.4)) drop-shadow(0 0 24px rgba(168,85,247,0.3))',
+             transition:'transform .3s ease',
+           }}
+           className="group-hover:scale-[1.04]"/>
     </a>
   );
 }

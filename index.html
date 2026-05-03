@@ -328,7 +328,8 @@
 
 
 <div id="root"></div>
-<script type="module" src="dist/bundle.js" defer></script>
+<!-- esbuild bundles as IIFE by default — no `type="module"` needed, so the page also works when opened via file:// for local previews. -->
+<script src="dist/bundle.js" defer></script>
 
 </body>
 </html>

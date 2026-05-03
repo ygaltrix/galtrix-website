@@ -38,7 +38,7 @@ function Logo({ compact = false }){
   // The image already includes the icon + "GALTRIX" wordmark + tagline, so we
   // only need to display it at a sensible height; width follows aspect ratio.
   // Aspect ratio of source: 3508/2480 ≈ 1.41 (wider than tall — wordmark to the right of icon).
-  const h = compact ? 48 : 60;
+  const h = compact ? 64 : 80;
   const w = Math.round(h * (3508/2480));
   const loadHint = compact ? 'lazy' : 'eager';
   const decodeHint = compact ? 'async' : 'auto';

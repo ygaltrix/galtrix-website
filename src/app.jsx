@@ -34,17 +34,19 @@ function Reveal({ children, delay=0, className="" }){
 }
 
 function Logo({ compact = false }){
-  // Icon-only logo (galtrix-icon.png — user's clean icon-only export).
-  // No wordmark or tagline — just the cloud-G mark, like Apple / X / Linear.
-  // Source dimensions: 3508x2480, aspect ratio ≈ 1.41 (landscape).
-  const h = compact ? 56 : 72;
+  // Header  → icon-only mark (galtrix-icon.png)
+  // Footer (compact) → full logo with wordmark + tagline (galtrix-logo-new.png)
+  // Both source PNGs have aspect ratio ≈ 1.41 (3508x2480).
+  const src = compact ? "galtrix-logo-new.png" : "galtrix-icon.png";
+  const alt = compact ? "GALTRIX — Built for what's next" : "GALTRIX";
+  const h = compact ? 96 : 72;
   const w = Math.round(h * (3508/2480));
   const loadHint = compact ? 'lazy' : 'eager';
   const decodeHint = compact ? 'async' : 'auto';
   const fetchHint = compact ? 'low' : 'high';
   return (
-    <a href="#home" className="group flex items-center" aria-label="GALTRIX">
-      <img src="galtrix-icon.png" alt="GALTRIX"
+    <a href="#home" className="group flex items-center" aria-label={alt}>
+      <img src={src} alt={alt}
            width={w} height={h}
            loading={loadHint} decoding={decodeHint} fetchpriority={fetchHint}
            style={{

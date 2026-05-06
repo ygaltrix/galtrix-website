@@ -258,3 +258,128 @@ are rejected on both the frontend **and** the server. The list lives in:
 - `DISPOSABLE_DOMAINS` Set near the top of [`src/app.jsx`](src/app.jsx)
 
 Keep them in sync. Add domains as you encounter abuse.
+
+---
+
+## DNS deliverability — Outlook / Hotmail / Yahoo
+
+Even with a perfect verification email body, Outlook / Hotmail / Yahoo may
+route messages to **Junk** if the sending domain (`galtrix.net`) doesn't
+have proper email authentication. This is independent of Apps Script — it's
+a **DNS** matter handled at your domain registrar (or wherever the
+`galtrix.net` zone lives).
+
+To improve Outlook / Hotmail deliverability, verify that `galtrix.net` has
+properly configured **SPF**, **DKIM**, and **DMARC** records for Google
+Workspace.
+
+### 1. SPF (Sender Policy Framework)
+
+Make sure `galtrix.net` has an **SPF TXT record** that authorizes Google
+Workspace to send email on its behalf.
+
+| Type | Host / Name | Value |
+|---|---|---|
+| TXT | `@` (or `galtrix.net`) | `v=spf1 include:_spf.google.com ~all` |
+
+> If you already have an SPF record (e.g. for another sender), don't add a
+> second one. Combine into a single record:
+> `v=spf1 include:_spf.google.com include:other-sender.com ~all`.
+> Multiple SPF TXT records on the same domain *break* SPF.
+
+### 2. DKIM (DomainKeys Identified Mail)
+
+DKIM lets receiving servers verify that the email was actually sent by
+Google Workspace and wasn't tampered with in transit.
+
+In **Google Admin Console** (admin.google.com, signed in as a Workspace
+admin):
+
+1. Go to **Apps → Google Workspace → Gmail**
+2. Click **Authenticate email**
+3. Click **Generate new record** for `galtrix.net`
+4. Copy the generated DNS record (looks like `google._domainkey TXT v=DKIM1; k=rsa; p=...`)
+5. Add the record at your DNS provider for `galtrix.net`:
+   - Type: `TXT`
+   - Host / Name: `google._domainkey`
+   - Value: the long `v=DKIM1; k=rsa; p=...` string
+6. Wait ~10 minutes for DNS to propagate
+7. Back in Google Admin Console, click **Start authentication**
+
+You should see "Authenticating email" or "DKIM signing is on" once it's
+verified.
+
+### 3. DMARC (Domain-based Message Authentication)
+
+DMARC tells receiving servers how to handle messages that fail SPF or DKIM
+and gives you reports on impersonation attempts.
+
+| Type | Host / Name | Value |
+|---|---|---|
+| TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:galtrix.info@galtrix.net` |
+
+The `p=none` policy is **monitor-only** — it doesn't block anything yet,
+just collects reports. After ~2 weeks of clean reports, strengthen it:
+
+- `p=quarantine` → suspicious mail goes to Junk on the recipient side
+- `p=reject` → strict, recipient rejects unsigned mail outright
+
+> Don't jump straight to `p=reject` on day one — it can block your own
+> legitimate mail if SPF or DKIM aren't 100% set up. Start with `p=none`,
+> watch reports, then escalate.
+
+### 4. Testing
+
+After DNS changes propagate (give it 30–60 minutes), test the verification
+email from the live website to **all three** major receivers:
+
+- **Gmail** (gmail.com) — usually inboxes immediately if SPF/DKIM are OK
+- **Outlook / Hotmail / Live** (outlook.com, hotmail.com, live.com)
+- **Yahoo / AOL** (yahoo.com, aol.com)
+
+For each test, ask the recipient to check **all** of:
+
+- Inbox
+- Junk / Spam
+- Promotions (Gmail) / Other (Outlook)
+
+If a test message lands in Junk on Outlook/Hotmail, ask the recipient to
+mark it **"Not Junk"** — that single click trains Microsoft's filter for
+your domain.
+
+**Free tools that grade SPF/DKIM/DMARC for you:**
+- <https://www.mail-tester.com> (send the test inquiry to the address it
+  gives you, then click "Then check your score" — you want 9.5+/10)
+- <https://mxtoolbox.com/spf.aspx> (just enter `galtrix.net`)
+- <https://mxtoolbox.com/dmarc.aspx>
+
+---
+
+## Sender reputation warm-up
+
+If `galtrix.net` is a new domain or the `galtrix.info@galtrix.net` mailbox
+is new, Outlook / Hotmail filters will be cautious for a few weeks until
+the sender builds reputation. To accelerate the warm-up:
+
+- Send normal business correspondence from `galtrix.info@galtrix.net` —
+  not just automated form replies
+- When you do reach out manually, get the recipient to **reply** to your
+  message (replies are a strong positive signal)
+- Ask trusted contacts to **add `galtrix.info@galtrix.net` to their
+  contacts** — Outlook treats Contacts as automatic-allow-list
+- If a verification email lands in Junk for an Outlook/Hotmail recipient,
+  ask them to right-click → **Mark as Not Junk** and to **Add Sender to
+  Safe Senders**
+- **Avoid sending bulk / blast emails** from a brand-new domain — it spikes
+  the spam-filter risk score. Stick to one-to-one and form-reply traffic
+  for the first 30 days.
+
+---
+
+## No code change can guarantee inbox delivery
+
+SPF, DKIM, DMARC, sender reputation, email content, *and* per-recipient
+behavior all influence whether a message lands in Inbox vs Junk. The
+changes in this repo (plain-text body, proper `From` name, `replyTo`,
+no images/tracking) measurably improve deliverability — but no engineering
+change can guarantee 100 % inbox placement on every receiver, every time.

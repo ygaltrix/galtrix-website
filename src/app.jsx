@@ -652,7 +652,7 @@ function Principles(){
                       <I.check className={`h-4 w-4 ${i%2===0?'text-cyan-300':'text-purple-300'}`}/>
                     </span>
                   </div>
-                  <div className="mt-6 text-lg font-medium text-white">{t}</div>
+                  <div className="mt-6 text-lg font-medium text-white">{label}</div>
                 </div>
               </Reveal>
             ))}

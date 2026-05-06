@@ -19,6 +19,8 @@ cp index.html build/
 
 # Copy any top-level static assets that exist
 for f in dashboard.html \
+         galtrix-logo-header.png \
+         galtrix-logo-footer.png \
          galtrix-logo-mark.svg \
          galtrix-logo.svg \
          galtrix-logo.png \
